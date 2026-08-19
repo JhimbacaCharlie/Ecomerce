@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carrito - TechStore</title>
+    <link rel="stylesheet" href="/css/estilos.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <a href="index.html" class="navbar-logo">Tech<span>Store</span></a>
+            <ul class="navbar-links" id="nav-links"></ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="alert-container"></div>
+        <div class="page-header">
+            <h1>Mi Carrito</h1>
+        </div>
+
+        <div id="cart-container">
+            <div class="loading"><div class="spinner"></div><br>Cargando carrito...</div>
+        </div>
+    </div>
+
+    <script src="/js/utils.js"></script>
+    <script>
+        if (!isLoggedIn()) {
+            window.location.href = 'login.html';
+        }
+
+        async function loadCart() {
+            const container = document.getElementById('cart-container');
+
+            try {
+                const res = await fetchWithAuth('/api/carrito');
+                if (res.ok) {
+                    const data = await res.json();
+                    renderCart(data);
+                } else {
+                    container.innerHTML = '<div class="empty-state"><p>Error al cargar el carrito</p></div>';
+                }
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state"><p>Error de conexion</p></div>';
+            }
+        }
+
+        function renderCart(cart) {
+            const container = document.getElementById('cart-container');
+
+            if (cart.items.length === 0) {
+                container.innerHTML = '<div class="cart-empty"><p>Tu carrito esta vacio</p><a href="index.html" class="btn btn-primary">Explorar productos</a></div>';
+                loadCartCount();
+                return;
+            }
+
+            let html = '<div class="cart-layout">';
+            html += '<div class="cart-items">';
+
+            cart.items.forEach(item => {
+                html += '<div class="cart-item">';
+                html += '<img src="' + (item.imagenUrl || 'https://via.placeholder.com/100x100?text=Sin+Img') + '" alt="' + item.productoNombre + '" class="cart-item-img" onerror="this.src=\'https://via.placeholder.com/100x100?text=Sin+Img\'">';
+                html += '<div class="cart-item-info">';
+                html += '<h3>' + item.productoNombre + '</h3>';
+                html += '<div class="unit-price">' + formatCurrency(item.precioUnitario) + ' c/u</div>';
+                html += '<div class="cart-item-actions">';
+                html += '<button class="btn btn-secondary btn-sm" onclick="cambiarCantidad(' + item.detalleId + ', ' + (item.cantidad - 1) + ')">-</button>';
+                html += '<input type="number" class="form-control" value="' + item.cantidad + '" min="1" onchange="cambiarCantidad(' + item.detalleId + ', this.value)" style="width:60px;text-align:center">';
+                html += '<button class="btn btn-secondary btn-sm" onclick="cambiarCantidad(' + item.detalleId + ', ' + (item.cantidad + 1) + ')">+</button>';
+                html += '<button class="btn btn-danger btn-sm" onclick="eliminarItem(' + item.detalleId + ')" title="Eliminar">X</button>';
+                html += '</div></div>';
+                html += '<div class="cart-item-subtotal">';
+                html += '<div class="subtotal-label">Subtotal</div>';
+                html += '<div class="subtotal-value">' + formatCurrency(item.subtotal) + '</div>';
+                html += '</div></div>';
+            });
+
+            html += '<div style="margin-top:1rem"><button class="btn btn-danger btn-sm" onclick="vaciarCarrito()">Vaciar carrito</button></div>';
+            html += '</div>';
+
+            html += '<div class="cart-summary">';
+            html += '<h2>Resumen del Pedido</h2>';
+            html += '<div class="cart-summary-row"><span>Productos (' + cart.totalItems + ')</span><span>' + formatCurrency(cart.total) + '</span></div>';
+            html += '<div class="cart-summary-row"><span>Envio</span><span style="color:var(--success);font-weight:600">Gratis</span></div>';
+            html += '<div class="cart-summary-row total"><span>Total</span><span>' + formatCurrency(cart.total) + '</span></div>';
+            html += '<button class="btn btn-success btn-block btn-lg" style="margin-top:1rem" onclick="confirmarPedido()">Confirmar Pedido</button>';
+            html += '<a href="index.html" class="btn btn-outline btn-block" style="margin-top:0.5rem">Seguir Comprando</a>';
+            html += '</div></div>';
+
+            container.innerHTML = html;
+            loadCartCount();
+        }
+
+        async function cambiarCantidad(detalleId, nuevaCantidad) {
+            nuevaCantidad = parseInt(nuevaCantidad);
+            if (nuevaCantidad < 1) {
+                eliminarItem(detalleId);
+                return;
+            }
+            try {
+                const res = await fetchWithAuth('/api/carrito/items/' + detalleId, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cantidad: nuevaCantidad })
+                });
+                if (res.ok) {
+                    loadCart();
+                } else {
+                    const data = await res.json();
+                    mostrarAlerta(data.mensaje || 'Error al actualizar cantidad', 'danger');
+                }
+            } catch (e) {
+                mostrarAlerta('Error de conexion', 'danger');
+            }
+        }
+
+        async function eliminarItem(detalleId) {
+            try {
+                const res = await fetchWithAuth('/api/carrito/items/' + detalleId, { method: 'DELETE' });
+                if (res.ok) {
+                    loadCart();
+                }
+            } catch (e) {
+                mostrarAlerta('Error de conexion', 'danger');
+            }
+        }
+
+        async function vaciarCarrito() {
+            if (!confirm('Seguro que deseas vaciar el carrito?')) return;
+            try {
+                const res = await fetchWithAuth('/api/carrito', { method: 'DELETE' });
+                if (res.ok) {
+                    loadCart();
+                }
+            } catch (e) {
+                mostrarAlerta('Error de conexion', 'danger');
+            }
+        }
+
+        async function confirmarPedido() {
+            if (!confirm('Deseas confirmar este pedido?')) return;
+            try {
+                const res = await fetchWithAuth('/api/pedidos/confirmar', { method: 'POST' });
+                if (res.ok) {
+                    mostrarAlerta('Pedido confirmado exitosamente!', 'success');
+                    loadCart();
+                    setTimeout(() => { window.location.href = 'pedidos.html'; }, 1500);
+                } else {
+                    const data = await res.json();
+                    mostrarAlerta(data.mensaje || 'Error al confirmar pedido', 'danger');
+                }
+            } catch (e) {
+                mostrarAlerta('Error de conexion', 'danger');
+            }
+        }
+
+        loadCart();
+    </script>
+</body>
+</html>

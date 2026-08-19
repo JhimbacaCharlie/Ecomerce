@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesion - TechStore</title>
+    <link rel="stylesheet" href="/css/estilos.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <a href="index.html" class="navbar-logo">Tech<span>Store</span></a>
+            <ul class="navbar-links" id="nav-links"></ul>
+        </div>
+    </nav>
+
+    <div class="auth-container">
+        <div class="auth-card">
+            <div id="alert-container" style="margin-bottom: 1rem;"></div>
+            <h1>Iniciar Sesion</h1>
+            <p class="subtitle">Ingresa tus credenciales para acceder</p>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" class="form-control" placeholder="tu@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Contrasena</label>
+                    <input type="password" id="password" class="form-control" placeholder="Tu contrasena" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block btn-lg" id="btn-submit">Ingresar</button>
+            </form>
+            <div class="auth-footer">
+                No tienes cuenta? <a href="registro.html">Registrate aqui</a>
+            </div>
+            <div style="margin-top:1.5rem;padding:1rem;background:var(--bg-input);border-radius:var(--radius);font-size:0.8rem;color:var(--text-dim);border:1px solid var(--border-color)">
+                <strong style="color:var(--primary)">Demo Admin:</strong> admin@ecommerce.com / admin123<br>
+                <strong style="color:var(--secondary)">Demo Cliente:</strong> Registrate uno nuevo
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/utils.js"></script>
+    <script>
+        // Función mejorada para mostrar alertas sin heredar estilos rotos
+        function mostrarAlerta(mensaje, tipo) {
+            let container = document.getElementById('alert-container');
+            // Limpiar alertas anteriores
+            container.innerHTML = '';
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-' + tipo;
+            alert.style.cssText = 'padding:0.75rem 1rem;border-radius:8px;font-size:0.9rem;margin-bottom:1rem;';
+            
+            if (tipo === 'danger') {
+                alert.style.backgroundColor = 'rgba(255, 7, 58, 0.1)';
+                alert.style.color = '#ff073a';
+                alert.style.border = '1px solid #ff073a';
+                alert.style.boxShadow = '0 0 10px rgba(255, 7, 58, 0.2)';
+            } else if (tipo === 'success') {
+                alert.style.backgroundColor = 'rgba(57, 255, 20, 0.1)';
+                alert.style.color = '#39ff14';
+                alert.style.border = '1px solid #39ff14';
+                alert.style.boxShadow = '0 0 10px rgba(57, 255, 20, 0.2)';
+            } else if (tipo === 'warning') {
+                alert.style.backgroundColor = 'rgba(255, 234, 0, 0.1)';
+                alert.style.color = '#ffea00';
+                alert.style.border = '1px solid #ffea00';
+                alert.style.boxShadow = '0 0 10px rgba(255, 234, 0, 0.2)';
+            }
+            
+            alert.textContent = mensaje;
+            container.appendChild(alert);
+            setTimeout(() => { alert.remove(); }, 5000);
+        }
+
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit');
+            btn.disabled = true;
+            btn.textContent = 'INGRESANDO...';
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: document.getElementById('email').value,
+                        password: document.getElementById('password').value
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    setAuthData(data);
+                    if (data.rol === 'ADMIN') {
+                        window.location.href = 'admin.html';
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                } else {
+                    mostrarAlerta(data.mensaje || 'Credenciales invalidas', 'danger');
+                }
+            } catch (err) {
+                mostrarAlerta('Error de conexion con el servidor', 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'INGRESAR';
+            }
+        });
+    </script>
+</body>
+</html>

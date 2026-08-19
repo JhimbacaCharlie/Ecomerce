@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Pedidos - TechStore</title>
+    <link rel="stylesheet" href="/css/estilos.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <a href="index.html" class="navbar-logo">Tech<span>Store</span></a>
+            <ul class="navbar-links" id="nav-links"></ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="alert-container"></div>
+        <div class="page-header">
+            <h1>Mis Pedidos</h1>
+        </div>
+
+        <div id="orders-container">
+            <div class="loading"><div class="spinner"></div><br>Cargando pedidos...</div>
+        </div>
+    </div>
+
+    <script src="/js/utils.js"></script>
+    <script>
+        if (!isLoggedIn()) {
+            window.location.href = 'login.html';
+        }
+
+        async function loadOrders() {
+            const container = document.getElementById('orders-container');
+
+            try {
+                const res = await fetchWithAuth('/api/pedidos/mis-pedidos');
+                if (res.ok) {
+                    const orders = await res.json();
+                    renderOrders(orders);
+                } else {
+                    container.innerHTML = '<div class="empty-state"><p>Error al cargar pedidos</p></div>';
+                }
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state"><p>Error de conexion</p></div>';
+            }
+        }
+
+        function renderOrders(orders) {
+            const container = document.getElementById('orders-container');
+
+            if (orders.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No tienes pedidos aun</p><a href="index.html" class="btn btn-primary">Explorar productos</a></div>';
+                return;
+            }
+
+            let html = '<div class="orders-list">';
+            orders.forEach(order => {
+                const fecha = new Date(order.fechaPedido).toLocaleString('es-ES');
+                html += '<div class="order-card">';
+                html += '<div class="order-header">';
+                html += '<div><span class="order-id">Pedido #' + order.id + '</span> <span class="order-date">' + fecha + '</span></div>';
+                html += '<span class="status-badge status-' + order.estado + '">' + order.estado + '</span>';
+                html += '</div>';
+                html += '<div class="order-body">';
+                order.detalles.forEach(d => {
+                    html += '<div class="order-item-row">';
+                    html += '<span>' + d.productoNombre + ' x' + d.cantidad + '</span>';
+                    html += '<span>' + formatCurrency(d.subtotal) + '</span>';
+                    html += '</div>';
+                });
+                html += '</div>';
+                html += '<div class="order-footer">';
+                html += '<span class="order-total">Total: ' + formatCurrency(order.total) + '</span>';
+                html += '</div>';
+                html += '</div>';
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        loadOrders();
+    </script>
+</body>
+</html>

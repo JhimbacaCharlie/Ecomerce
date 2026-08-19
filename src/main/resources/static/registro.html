@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - E-Commerce</title>
+    <link rel="stylesheet" href="/css/estilos.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <a href="index.html" class="navbar-logo">Tech<span>Store</span></a>
+            <ul class="navbar-links" id="nav-links"></ul>
+        </div>
+    </nav>
+
+    <div class="auth-container">
+        <div class="auth-card">
+            <div id="alert-container"></div>
+            <h1>Crear Cuenta</h1>
+            <p class="subtitle">Completa tus datos para registrarte</p>
+            <form id="registro-form">
+                <div class="form-group">
+                    <label for="nombre">Nombre completo</label>
+                    <input type="text" id="nombre" class="form-control" placeholder="Tu nombre" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" class="form-control" placeholder="tu@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Contrasena</label>
+                    <input type="password" id="password" class="form-control" placeholder="Minimo 6 caracteres" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="direccion">Direccion (opcional)</label>
+                    <input type="text" id="direccion" class="form-control" placeholder="Tu direccion">
+                </div>
+                <div class="form-group">
+                    <label for="telefono">Telefono (opcional)</label>
+                    <input type="text" id="telefono" class="form-control" placeholder="Tu telefono">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block btn-lg" id="btn-submit">Registrarse</button>
+            </form>
+            <div class="auth-footer">
+                Ya tienes cuenta? <a href="login.html">Inicia sesion</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/utils.js"></script>
+    <script>
+        document.getElementById('registro-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit');
+            btn.disabled = true;
+            btn.textContent = 'Registrando...';
+
+            try {
+                const res = await fetch('/api/auth/registro', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nombre: document.getElementById('nombre').value,
+                        email: document.getElementById('email').value,
+                        password: document.getElementById('password').value,
+                        direccion: document.getElementById('direccion').value,
+                        telefono: document.getElementById('telefono').value
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    setAuthData(data);
+                    window.location.href = 'index.html';
+                } else {
+                    let mensaje = data.mensaje || 'Error al registrarse';
+                    if (data.errores) {
+                        mensaje = Object.values(data.errores).join(', ');
+                    }
+                    mostrarAlerta(mensaje, 'danger');
+                }
+            } catch (err) {
+                mostrarAlerta('Error de conexion con el servidor', 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Registrarse';
+            }
+        });
+    </script>
+</body>
+</html>

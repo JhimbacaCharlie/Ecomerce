@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalle del Producto - TechStore</title>
+    <link rel="stylesheet" href="/css/estilos.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <a href="index.html" class="navbar-logo">Tech<span>Store</span></a>
+            <ul class="navbar-links" id="nav-links"></ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="alert-container"></div>
+        <div id="product-container">
+            <div class="loading"><div class="spinner"></div><br>Cargando producto...</div>
+        </div>
+    </div>
+
+    <script src="/js/utils.js"></script>
+    <script>
+        async function loadProduct() {
+            const container = document.getElementById('product-container');
+            const id = getUrlParam('id');
+
+            if (!id) {
+                container.innerHTML = '<div class="empty-state"><p>Producto no especificado</p><a href="index.html" class="btn btn-primary">Volver a productos</a></div>';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/productos/' + id);
+                if (res.ok) {
+                    const p = await res.json();
+                    renderProduct(p);
+                } else {
+                    container.innerHTML = '<div class="empty-state"><p>Producto no encontrado</p><a href="index.html" class="btn btn-primary">Volver a productos</a></div>';
+                }
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state"><p>Error de conexion</p></div>';
+            }
+        }
+
+        function renderProduct(p) {
+            const container = document.getElementById('product-container');
+            let stockClass = 'in-stock';
+            let stockText = 'En stock: ' + p.stock + ' unidades';
+            if (p.stock <= 0) {
+                stockClass = 'no-stock';
+                stockText = 'Agotado';
+            } else if (p.stock <= 10) {
+                stockClass = 'low-stock';
+                stockText = 'Pocas unidades: ' + p.stock + ' disponibles';
+            }
+
+            let html = '<div class="product-detail">';
+            html += '<img src="' + (p.imagenUrl || 'https://via.placeholder.com/600x400?text=Sin+Imagen') + '" alt="' + p.nombre + '" class="product-detail-img" onerror="this.src=\'https://via.placeholder.com/600x400?text=Sin+Imagen\'">';
+            html += '<div class="product-detail-info">';
+            html += '<h1>' + p.nombre + '</h1>';
+            if (p.categoriaNombre) html += '<span class="category-badge">' + p.categoriaNombre + '</span>';
+            html += '<div class="price">' + formatCurrency(p.precio) + '</div>';
+            html += '<div class="description">' + (p.descripcion || 'Sin descripcion disponible') + '</div>';
+            html += '<div class="stock-info"><span class="' + stockClass + '">' + stockText + '</span></div>';
+
+            if (p.stock > 0) {
+                html += '<div class="quantity-selector">';
+                html += '<label>Cantidad:</label>';
+                html += '<button class="btn btn-secondary btn-sm" onclick="changeQty(-1)">-</button>';
+                html += '<input type="number" id="quantity" class="form-control" value="1" min="1" max="' + p.stock + '">';
+                html += '<button class="btn btn-secondary btn-sm" onclick="changeQty(1)">+</button>';
+                html += '</div>';
+                html += '<button class="btn btn-primary btn-lg btn-block" id="btn-add-cart" onclick="agregarAlCarrito(' + p.id + ')">Agregar al Carrito</button>';
+            } else {
+                html += '<button class="btn btn-secondary btn-lg btn-block" disabled>Producto agotado</button>';
+            }
+
+            html += '<br><a href="index.html" class="btn btn-outline btn-block" style="margin-top:0.75rem">Volver a productos</a>';
+            html += '</div></div>';
+            container.innerHTML = html;
+        }
+
+        function changeQty(delta) {
+            const input = document.getElementById('quantity');
+            let val = parseInt(input.value) + delta;
+            const max = parseInt(input.max);
+            if (val < 1) val = 1;
+            if (val > max) val = max;
+            input.value = val;
+        }
+
+        async function agregarAlCarrito(productoId) {
+            const btn = document.getElementById('btn-add-cart');
+            if (!isLoggedIn()) {
+                mostrarAlerta('Debes iniciar sesion para agregar al carrito', 'warning');
+                setTimeout(() => { window.location.href = 'login.html'; }, 1000);
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Agregando...';
+
+            try {
+                const cantidad = parseInt(document.getElementById('quantity').value);
+                const res = await fetchWithAuth('/api/carrito/items', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ productoId: productoId, cantidad: cantidad })
+                });
+
+                if (res.ok) {
+                    mostrarAlerta('Producto agregado al carrito', 'success');
+                    btn.textContent = 'Agregado!';
+                    loadCartCount();
+                    setTimeout(() => {
+                        btn.disabled = false;
+                        btn.textContent = 'Agregar al Carrito';
+                    }, 2000);
+                } else {
+                    const data = await res.json();
+                    mostrarAlerta(data.mensaje || 'Error al agregar', 'danger');
+                    btn.disabled = false;
+                    btn.textContent = 'Agregar al Carrito';
+                }
+            } catch (e) {
+                mostrarAlerta('Error de conexion', 'danger');
+                btn.disabled = false;
+                btn.textContent = 'Agregar al Carrito';
+            }
+        }
+
+        loadProduct();
+    </script>
+</body>
+</html>

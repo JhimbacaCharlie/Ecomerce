@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administracion - TechStore</title>
+    <link rel="stylesheet" href="/css/estilos.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <a href="index.html" class="navbar-logo">Tech<span>Store</span></a>
+            <ul class="navbar-links" id="nav-links"></ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div id="alert-container"></div>
+        <div class="page-header">
+            <h1>Panel de Administracion</h1>
+        </div>
+
+        <div class="admin-tabs">
+            <button class="admin-tab active" onclick="showPanel('productos')">Productos</button>
+            <button class="admin-tab" onclick="showPanel('pedidos')">Pedidos</button>
+        </div>
+
+        <!-- PANEL PRODUCTOS -->
+        <div id="panel-productos" class="admin-panel active">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem">
+                <h2 style="font-size:1.2rem">Gestion de Productos</h2>
+                <button class="btn btn-primary" onclick="openProductModal()">+ Nuevo Producto</button>
+            </div>
+            <div class="table-responsive" id="products-table-container">
+                <div class="loading"><div class="spinner"></div><br>Cargando...</div>
+            </div>
+        </div>
+
+        <!-- PANEL PEDIDOS -->
+        <div id="panel-pedidos" class="admin-panel">
+            <h2 style="font-size:1.2rem;margin-bottom:1rem">Gestion de Pedidos</h2>
+            <div id="orders-table-container">
+                <div class="loading"><div class="spinner"></div><br>Cargando...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PRODUCTO -->
+    <div class="modal-overlay hidden" id="product-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modal-title">Nuevo Producto</h2>
+                <button class="modal-close" onclick="closeProductModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="product-form">
+                    <input type="hidden" id="prod-id">
+                    <div class="form-group">
+                        <label for="prod-nombre">Nombre</label>
+                        <input type="text" id="prod-nombre" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="prod-descripcion">Descripcion</label>
+                        <textarea id="prod-descripcion" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+                        <div class="form-group">
+                            <label for="prod-precio">Precio</label>
+                            <input type="number" id="prod-precio" class="form-control" step="0.01" min="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="prod-stock">Stock</label>
+                            <input type="number" id="prod-stock" class="form-control" min="0" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="prod-imagen">URL de Imagen</label>
+                        <input type="text" id="prod-imagen" class="form-control" placeholder="https://...">
+                    </div>
+                    <div class="form-group">
+                        <label for="prod-categoria">Categoria</label>
+                        <select id="prod-categoria" class="form-control">
+                            <option value="">Sin categoria</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeProductModal()">Cancelar</button>
+                <button class="btn btn-primary" id="btn-save-product" onclick="saveProduct()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DETALLE PEDIDO -->
+    <div class="modal-overlay hidden" id="order-detail-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Detalle del Pedido</h2>
+                <button class="modal-close" onclick="closeOrderDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="order-detail-body"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeOrderDetailModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/utils.js"></script>
+    <script>
+        if (!isAdmin()) {
+            window.location.href = 'index.html';
+        }
+
+        let categorias = [];
+
+        function showPanel(name) {
+            document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('panel-' + name).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        /* ========================================
+           CATEGORIAS
+           ======================================== */
+        async function loadCategorias() {
+            try {
+                const res = await fetch('/api/productos/categorias');
+                if (res.ok) {
+                    categorias = await res.json();
+                    const select = document.getElementById('prod-categoria');
+                    select.innerHTML = '<option value="">Sin categoria</option>';
+                    categorias.forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c.id;
+                        opt.textContent = c.nombre;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (e) {}
+        }
+
+        /* ========================================
+           PRODUCTOS ADMIN
+           ======================================== */
+        async function loadAdminProducts() {
+            const container = document.getElementById('products-table-container');
+            try {
+                const res = await fetchWithAuth('/api/productos');
+                if (res.ok) {
+                    const products = await res.json();
+                    renderAdminProducts(products);
+                } else {
+                    container.innerHTML = '<div class="empty-state"><p>Error al cargar</p></div>';
+                }
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state"><p>Error de conexion</p></div>';
+            }
+        }
+
+        function renderAdminProducts(products) {
+            const container = document.getElementById('products-table-container');
+            if (products.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No hay productos</p></div>';
+                return;
+            }
+
+            let html = '<table class="admin-table">';
+            html += '<thead><tr><th>Imagen</th><th>Nombre</th><th>Categoria</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead>';
+            html += '<tbody>';
+            products.forEach(p => {
+                html += '<tr>';
+                html += '<td><img src="' + (p.imagenUrl || 'https://via.placeholder.com/50x50?text=N/A') + '" style="width:50px;height:50px;object-fit:cover;border-radius:4px" onerror="this.src=\'https://via.placeholder.com/50x50?text=N/A\'"></td>';
+                html += '<td>' + p.nombre + '</td>';
+                html += '<td>' + (p.categoriaNombre || '-') + '</td>';
+                html += '<td>' + formatCurrency(p.precio) + '</td>';
+                html += '<td>' + p.stock + '</td>';
+                html += '<td class="actions">';
+                html += '<button class="btn btn-primary btn-sm" onclick="editProduct(' + p.id + ')">Editar</button>';
+                html += '<button class="btn btn-danger btn-sm" onclick="deleteProduct(' + p.id + ')">Eliminar</button>';
+                html += '</td></tr>';
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function openProductModal(product) {
+            document.getElementById('product-modal').classList.remove('hidden');
+            if (product) {
+                document.getElementById('modal-title').textContent = 'Editar Producto';
+                document.getElementById('prod-id').value = product.id;
+                document.getElementById('prod-nombre').value = product.nombre;
+                document.getElementById('prod-descripcion').value = product.descripcion || '';
+                document.getElementById('prod-precio').value = product.precio;
+                document.getElementById('prod-stock').value = product.stock;
+                document.getElementById('prod-imagen').value = product.imagenUrl || '';
+                document.getElementById('prod-categoria').value = product.categoriaId || '';
+            } else {
+                document.getElementById('modal-title').textContent = 'Nuevo Producto';
+                document.getElementById('product-form').reset();
+                document.getElementById('prod-id').value = '';
+            }
+        }
+
+        function closeProductModal() {
+            document.getElementById('product-modal').classList.add('hidden');
+        }
+
+        async function editProduct(id) {
+            try {
+                const res = await fetchWithAuth('/api/productos/' + id);
+                if (res.ok) {
+                    const product = await res.json();
+                    openProductModal(product);
+                }
+            } catch (e) {
+                mostrarAlerta('Error de conexion', 'danger');
+            }
+        }
+
+        async function saveProduct() {
+            const btn = document.getElementById('btn-save-product');
+            btn.disabled = true;
+            btn.textContent = 'Guardando...';
+
+            const id = document.getElementById('prod-id').value;
+            const body = {
+                nombre: document.getElementById('prod-nombre').value,
+                descripcion: document.getElementById('prod-descripcion').value,
+                precio: parseFloat(document.getElementById('prod-precio').value),
+                stock: parseInt(document.getElementById('prod-stock').value),
+                imagenUrl: document.getElementById('prod-imagen').value,
+                categoriaId: document.getElementById('prod-categoria').value ? parseInt(document.getElementById('prod-categoria').value) : null
+            };
+
+            try {
+                let res;
+                if (id) {
+                    res = await fetchWithAuth('/api/productos/' + id, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    });
+                } else {
+                    res = await fetchWithAuth('/api/productos', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    });
+                }
+
+                if (res.ok) {
+                    mostrarAlerta('Producto guardado correctamente', 'success');
+                    closeProductModal();
+                    loadAdminProducts();
+                } else {
+                    const data = await res.json();
+                    let msg = data.mensaje || 'Error al guardar';
+                    if (data.errores) msg = Object.values(data.errores).join(', ');
+                    mostrarAlerta(msg, 'danger');
+                }
+            } catch (e) {
+                mostrarAlerta('Error de conexion', 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Guardar';
+            }
+        }
+
+        async function deleteProduct(id) {
+            if (!confirm('Seguro que deseas eliminar este producto?')) return;
+            try {
+                const res = await fetchWithAuth('/api/productos/' + id, { method: 'DELETE' });
+                if (res.ok) {
+                    mostrarAlerta('Producto eliminado', 'success');
+                    loadAdminProducts();
+                } else {
+                    mostrarAlerta('Error al eliminar', 'danger');
+                }
+            } catch (e) {
+                mostrarAlerta('Error de conexion', 'danger');
+            }
+        }
+
+        /* ========================================
+           PEDIDOS ADMIN
+           ======================================== */
+        async function loadAdminOrders() {
+            const container = document.getElementById('orders-table-container');
+            try {
+                const res = await fetchWithAuth('/api/pedidos/todos');
+                if (res.ok) {
+                    const orders = await res.json();
+                    renderAdminOrders(orders);
+                } else {
+                    container.innerHTML = '<div class="empty-state"><p>Error al cargar</p></div>';
+                }
+            } catch (e) {
+                container.innerHTML = '<div class="empty-state"><p>Error de conexion</p></div>';
+            }
+        }
+
+        function renderAdminOrders(orders) {
+            const container = document.getElementById('orders-table-container');
+            if (orders.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No hay pedidos</p></div>';
+                return;
+            }
+
+            let html = '<table class="admin-table">';
+            html += '<thead><tr><th>ID</th><th>Cliente</th><th>Fecha</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead>';
+            html += '<tbody>';
+            orders.forEach(o => {
+                const fecha = new Date(o.fechaPedido).toLocaleString('es-ES');
+                html += '<tr>';
+                html += '<td>#' + o.id + '</td>';
+                html += '<td>' + o.nombreUsuario + '</td>';
+                html += '<td>' + fecha + '</td>';
+                html += '<td>' + formatCurrency(o.total) + '</td>';
+                html += '<td><span class="status-badge status-' + o.estado + '">' + o.estado + '</span></td>';
+                html += '<td class="actions">';
+                html += '<button class="btn btn-primary btn-sm" onclick="viewOrderDetail(' + o.id + ')">Ver</button>';
+                html += '<select onchange="changeOrderStatus(' + o.id + ', this.value)" style="padding:0.35rem;font-size:0.8rem;border-radius:var(--radius);border:1px solid var(--gray-200)">';
+                ['PENDIENTE','PROCESANDO','ENVIADO','ENTREGADO','CANCELADO'].forEach(est => {
+                    html += '<option value="' + est + '"' + (o.estado === est ? ' selected' : '') + '>' + est + '</option>';
+                });
+                html += '</select>';
+                html += '</td></tr>';
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        async function viewOrderDetail(id) {
+            try {
+                const res = await fetchWithAuth('/api/pedidos/' + id);
+                if (res.ok) {
+                    const order = await res.json();
+                    const fecha = new Date(order.fechaPedido).toLocaleString('es-ES');
+                    let html = '<p><strong>Pedido #' + order.id + '</strong></p>';
+                    html += '<p>Cliente: ' + order.nombreUsuario + '</p>';
+                    html += '<p>Fecha: ' + fecha + '</p>';
+                    html += '<p>Estado: <span class="status-badge status-' + order.estado + '">' + order.estado + '</span></p>';
+                    html += '<hr style="margin:1rem 0">';
+                    order.detalles.forEach(d => {
+                        html += '<div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid var(--gray-100);font-size:0.9rem">';
+                        html += '<span>' + d.productoNombre + ' x' + d.cantidad + '</span>';
+                        html += '<span>' + formatCurrency(d.subtotal) + '</span></div>';
+                    });
+                    html += '<div style="display:flex;justify-content:space-between;padding:0.75rem 0;font-size:1.1rem;font-weight:800"><span>Total</span><span>' + formatCurrency(order.total) + '</span></div>';
+                    document.getElementById('order-detail-body').innerHTML = html;
+                    document.getElementById('order-detail-modal').classList.remove('hidden');
+                }
+            } catch (e) {
+                mostrarAlerta('Error de conexion', 'danger');
+            }
+        }
+
+        function closeOrderDetailModal() {
+            document.getElementById('order-detail-modal').classList.add('hidden');
+        }
+
+        async function changeOrderStatus(id, estado) {
+            try {
+                const res = await fetchWithAuth('/api/pedidos/' + id + '/estado', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ estado: estado })
+                });
+                if (res.ok) {
+                    mostrarAlerta('Estado actualizado a ' + estado, 'success');
+                    loadAdminOrders();
+                } else {
+                    const data = await res.json();
+                    mostrarAlerta(data.mensaje || 'Error al actualizar', 'danger');
+                    loadAdminOrders();
+                }
+            } catch (e) {
+                mostrarAlerta('Error de conexion', 'danger');
+            }
+        }
+
+        /* ========================================
+           INIT
+           ======================================== */
+        loadCategorias();
+        loadAdminProducts();
+        loadAdminOrders();
+    </script>
+</body>
+</html>
