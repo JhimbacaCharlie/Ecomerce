@@ -35,13 +35,17 @@ async function cargarProductos() {
 function renderProductos(productos) {
     const grid = document.getElementById('productosGrid');
     grid.innerHTML = productos.map(p => `
-        <div class="product-card">
-            <div class="product-img">📦</div>
-            <div class="product-info">
-                <h3>${p.nombre}</h3>
-                <p>${p.descripcion || ''} - Stock: ${p.stock}</p>
-                <div class="price-tag">S/ ${p.precio.toFixed(2)}</div>
-                <button class="btn-add-cart" onclick="agregarAlCarrito(${p.id})">Agregar al Carrito</button>
+        <div class="card">
+            <img class="card-img" src="${p.imagenUrl || 'https://images.unsplash.com/photo-1555664424-778a1e5e1b48?w=400&h=300&fit=crop'}" alt="${p.nombre}">
+            <div class="card-body">
+                <div class="card-category">${p.categoria || 'General'}</div>
+                <h3 class="card-title" title="${p.nombre}">${p.nombre}</h3>
+                <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem; height: 40px; overflow: hidden; text-overflow: ellipsis;">${p.descripcion || ''}</p>
+                <div class="card-price">S/ ${p.precio.toFixed(2)}</div>
+                <div class="card-stock ${p.stock > 0 ? '' : 'out-of-stock'}">${p.stock > 0 ? 'Stock: ' + p.stock : 'Agotado'}</div>
+                <button class="btn btn-primary btn-block" onclick="agregarAlCarrito(${p.id})" ${p.stock <= 0 ? 'disabled' : ''}>
+                    Agregar al Carrito
+                </button>
             </div>
         </div>
     `).join('');
@@ -89,7 +93,7 @@ async function actualizarContadorCarrito() {
 
 async function verCarrito() {
     if (!userSession.loggedIn) return mostrarLogin();
-    document.getElementById('carritoModal').style.display = 'flex';
+    document.getElementById('carritoModal').classList.remove('hidden');
     const res = await fetch(`${API}/carrito`);
     const carrito = await res.json();
     
@@ -150,17 +154,17 @@ async function realizarPedido() {
     } catch (e) { alert('Error de conexión'); }
 }
 
-function cerrarCarrito() { document.getElementById('carritoModal').style.display = 'none'; }
+function cerrarCarrito() { document.getElementById('carritoModal').classList.add('hidden'); }
 
 // --- AUTENTICACIÓN ---
-function mostrarLogin() { document.getElementById('loginModal').style.display = 'flex'; }
-function cerrarLogin() { document.getElementById('loginModal').style.display = 'none'; }
-function mostrarRegistro() { document.getElementById('registroModal').style.display = 'flex'; }
-function cerrarRegistro() { document.getElementById('registroModal').style.display = 'none'; }
+function mostrarLogin() { document.getElementById('loginModal').classList.remove('hidden'); }
+function cerrarLogin() { document.getElementById('loginModal').classList.add('hidden'); }
+function mostrarRegistro() { document.getElementById('registroModal').classList.remove('hidden'); }
+function cerrarRegistro() { document.getElementById('registroModal').classList.add('hidden'); }
 
 async function login(e) {
     e.preventDefault();
-    const dto = { username: document.getElementById('loginUsername').value, password: document.getElementById('loginPassword').value };
+    const dto = { email: document.getElementById('loginEmail').value, password: document.getElementById('loginPassword').value };
     try {
         const res = await fetch(`${API}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dto) });
         if (res.ok) {
@@ -174,11 +178,11 @@ async function login(e) {
 async function registrar(e) {
     e.preventDefault();
     const dto = {
-        username: document.getElementById('regUsername').value, password: document.getElementById('regPassword').value,
-        nombres: document.getElementById('regNombres').value, correo: document.getElementById('regCorreo').value,
+        nombre: document.getElementById('regNombre').value, email: document.getElementById('regEmail').value,
+        password: document.getElementById('regPassword').value,
         direccion: document.getElementById('regDireccion').value, telefono: document.getElementById('regTelefono').value
     };
-    const res = await fetch(`${API}/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dto) });
+    const res = await fetch(`${API}/auth/registro`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dto) });
     if (res.ok) { cerrarRegistro(); alert('Registrado exitosamente. Inicie sesión.'); mostrarLogin(); }
     else { const err = await res.json(); alert(err.error || 'Error al registrar'); }
 }
@@ -193,7 +197,7 @@ async function cerrarSesion() {
 // --- PEDIDOS ---
 async function verPedidos() {
     if (!userSession.loggedIn) return mostrarLogin();
-    document.getElementById('pedidosModal').style.display = 'flex';
+    document.getElementById('pedidosModal').classList.remove('hidden');
     const res = await fetch(`${API}/pedidos`);
     const pedidos = await res.json();
     
@@ -214,7 +218,7 @@ function getBadgeClass(estado) {
     if (estado === 'PENDIENTE') return 'pending'; if (estado === 'PAGADO') return 'paid';
     if (estado === 'ENVIADO') return 'sent'; return 'delivered';
 }
-function cerrarPedidos() { document.getElementById('pedidosModal').style.display = 'none'; }
+function cerrarPedidos() { document.getElementById('pedidosModal').classList.add('hidden'); }
 
 // --- ADMIN PANEL ---
 async function cargarProductosAdmin() {
