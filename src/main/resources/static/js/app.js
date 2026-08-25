@@ -21,19 +21,34 @@ function updateUI() {
         document.getElementById('registroSection').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
         document.getElementById('userName').textContent = `Hola, ${userSession.name}`;
+        
+        if (userSession.role === 'ADMIN') {
+            document.getElementById('navAdmin').style.display = 'inline-block';
+            verAdminPanel(); // Redirigir directamente al panel admin
+        } else {
+            document.getElementById('navAdmin').style.display = 'none';
+            verCatalogo(); // Usuarios normales ven el catálogo
+        }
     } else {
         document.getElementById('mainApp').style.display = 'none';
         document.getElementById('registroSection').style.display = 'none';
         document.getElementById('loginSection').style.display = 'flex';
     }
-    
-    // Mostrar panel admin si es ADMIN
-    if (userSession.role === 'ADMIN') {
-        document.getElementById('adminSection').style.display = 'block';
-        cargarProductosAdmin();
-    } else {
-        document.getElementById('adminSection').style.display = 'none';
-    }
+}
+
+function verCatalogo() {
+    document.getElementById('vistaAdmin').style.display = 'none';
+    document.getElementById('vistaCatalogo').style.display = 'block';
+    document.getElementById('navCatalogo').classList.add('active');
+    document.getElementById('navAdmin').querySelector('a').classList.remove('active');
+}
+
+function verAdminPanel() {
+    document.getElementById('vistaCatalogo').style.display = 'none';
+    document.getElementById('vistaAdmin').style.display = 'block';
+    document.getElementById('navAdmin').querySelector('a').classList.add('active');
+    document.getElementById('navCatalogo').classList.remove('active');
+    cargarProductosAdmin();
 }
 
 // --- PRODUCTOS ---
@@ -252,28 +267,90 @@ function cerrarPedidos() { document.getElementById('pedidosModal').classList.add
 
 // --- ADMIN PANEL ---
 async function cargarProductosAdmin() {
-    const res = await fetchWithAuth(`${API}/productos/todos`);
+    const res = await fetchWithAuth(`${API}/productos`);
     const productos = await res.json();
     const tbody = document.getElementById('adminTableBody');
     tbody.innerHTML = productos.map(p => `
         <tr>
-            <td>${p.id}</td><td>${p.nombre}</td><td>${p.categoria}</td>
-            <td>S/ ${p.precio.toFixed(2)}</td><td>${p.stock}</td>
-            <td class="${p.activo ? 'status-active' : 'status-inactive'}">${p.activo ? 'Activo' : 'Inactivo'}</td>
-            <td>
-                ${p.activo ? 
-                    `<button onclick="toggleProducto(${p.id}, 'desactivar')" style="background:#e74c3c;color:white;padding:5px;border:none;border-radius:3px;cursor:pointer;">Desactivar</button>` : 
-                    `<button onclick="toggleProducto(${p.id}, 'activar')" style="background:#27ae60;color:white;padding:5px;border:none;border-radius:3px;cursor:pointer;">Activar</button>`
-                }
+            <td>${p.id}</td>
+            <td>${p.nombre}</td>
+            <td>S/ ${p.precio.toFixed(2)}</td>
+            <td>${p.stock}</td>
+            <td>${p.categoriaNombre || 'N/A'}</td>
+            <td style="text-align:right;">
+                <button onclick="abrirModalProducto(${p.id})" class="btn btn-sm btn-primary">Editar</button>
+                <button onclick="eliminarProducto(${p.id})" class="btn btn-sm btn-danger">Eliminar</button>
             </td>
         </tr>
     `).join('');
 }
 
-async function toggleProducto(id, accion) {
-    await fetchWithAuth(`${API}/productos/${id}/${accion}`, { method: 'PUT' });
-    cargarProductosAdmin();
-    cargarProductos(); // Actualiza la vista pública también
+async function abrirModalProducto(id = null) {
+    const resCats = await fetch(`${API}/productos/categorias`);
+    const categorias = await resCats.json();
+    document.getElementById('prodCategoria').innerHTML = categorias.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+
+    if (id) {
+        document.getElementById('productoModalTitle').textContent = 'Editar Producto';
+        const res = await fetch(`${API}/productos/${id}`);
+        const p = await res.json();
+        document.getElementById('prodId').value = p.id;
+        document.getElementById('prodNombre').value = p.nombre;
+        document.getElementById('prodDescripcion').value = p.descripcion || '';
+        document.getElementById('prodPrecio').value = p.precio;
+        document.getElementById('prodStock').value = p.stock;
+        document.getElementById('prodCategoria').value = p.categoriaId || '';
+        document.getElementById('prodImagen').value = p.imagenUrl || '';
+    } else {
+        document.getElementById('productoModalTitle').textContent = 'Nuevo Producto';
+        document.getElementById('formProducto').reset();
+        document.getElementById('prodId').value = '';
+    }
+    document.getElementById('productoModal').classList.remove('hidden');
+}
+
+function cerrarModalProducto() {
+    document.getElementById('productoModal').classList.add('hidden');
+}
+
+async function guardarProducto(e) {
+    e.preventDefault();
+    const id = document.getElementById('prodId').value;
+    const dto = {
+        nombre: document.getElementById('prodNombre').value,
+        descripcion: document.getElementById('prodDescripcion').value,
+        precio: parseFloat(document.getElementById('prodPrecio').value),
+        stock: parseInt(document.getElementById('prodStock').value),
+        categoriaId: parseInt(document.getElementById('prodCategoria').value),
+        imagenUrl: document.getElementById('prodImagen').value
+    };
+
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `${API}/productos/${id}` : `${API}/productos`;
+
+    const res = await fetchWithAuth(url, {
+        method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dto)
+    });
+
+    if (res.ok) {
+        cerrarModalProducto();
+        cargarProductosAdmin();
+        cargarProductos();
+    } else {
+        alert('Error al guardar el producto');
+    }
+}
+
+async function eliminarProducto(id) {
+    if (confirm('¿Estás seguro de eliminar este producto?')) {
+        const res = await fetchWithAuth(`${API}/productos/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            cargarProductosAdmin();
+            cargarProductos();
+        } else {
+            alert('Error al eliminar');
+        }
+    }
 }
 
 // Init
