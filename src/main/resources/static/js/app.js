@@ -39,7 +39,7 @@ async function cargarProductos() {
     const res = await fetch(`${API}/productos`);
     const productos = await res.json();
     renderProductos(productos);
-    cargarCategorias(productos);
+    cargarCategorias(); // Llamar a cargarCategorias independientemente
 }
 
 function renderProductos(productos) {
@@ -48,7 +48,7 @@ function renderProductos(productos) {
         <div class="card">
             <img class="card-img" src="${p.imagenUrl || 'https://images.unsplash.com/photo-1555664424-778a1e5e1b48?w=400&h=300&fit=crop'}" alt="${p.nombre}">
             <div class="card-body">
-                <div class="card-category">${p.categoria || 'General'}</div>
+                <div class="card-category">${p.categoriaNombre || 'General'}</div>
                 <h3 class="card-title" title="${p.nombre}">${p.nombre}</h3>
                 <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.5rem; height: 40px; overflow: hidden; text-overflow: ellipsis;">${p.descripcion || ''}</p>
                 <div class="card-price">S/ ${p.precio.toFixed(2)}</div>
@@ -61,10 +61,12 @@ function renderProductos(productos) {
     `).join('');
 }
 
-function cargarCategorias(productos) {
+async function cargarCategorias() {
+    const res = await fetch(`${API}/productos/categorias`);
+    const categorias = await res.json();
     const select = document.getElementById('categoriaFilter');
-    const cats = [...new Set(productos.map(p => p.categoria).filter(Boolean))];
-    select.innerHTML = '<option value="">Todas las categorías</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+    select.innerHTML = '<option value="">Todas las categorías</option>' + 
+        categorias.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
 }
 
 async function buscarProductos() {
@@ -84,7 +86,7 @@ async function filtrarPorCategoria() {
 // --- CARRITO ---
 async function agregarAlCarrito(productoId) {
     if (!userSession.loggedIn) return mostrarLogin();
-    await fetch(`${API}/carrito/agregar`, {
+    await fetchWithAuth(`${API}/carrito/items`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productoId, cantidad: 1 })
     });
@@ -95,7 +97,7 @@ async function agregarAlCarrito(productoId) {
 async function actualizarContadorCarrito() {
     if (!userSession.loggedIn) return;
     try {
-        const res = await fetch(`${API}/carrito`);
+        const res = await fetchWithAuth(`${API}/carrito`);
         const carrito = await res.json();
         document.getElementById('carritoCount').textContent = carrito.items ? carrito.items.length : 0;
     } catch (e) { console.log(e); }
@@ -104,7 +106,7 @@ async function actualizarContadorCarrito() {
 async function verCarrito() {
     if (!userSession.loggedIn) return mostrarLogin();
     document.getElementById('carritoModal').classList.remove('hidden');
-    const res = await fetch(`${API}/carrito`);
+    const res = await fetchWithAuth(`${API}/carrito`);
     const carrito = await res.json();
     
     document.getElementById('carritoItems').innerHTML = carrito.items.length === 0 ? '<p>El carrito está vacío</p>' :
@@ -128,22 +130,22 @@ async function verCarrito() {
 
 async function cambiarCantidad(detalleId, nuevaCantidad) {
     if (nuevaCantidad <= 0) return eliminarDelCarrito(detalleId);
-    await fetch(`${API}/carrito/actualizar`, {
+    await fetchWithAuth(`${API}/carrito/items/${detalleId}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ detalleId, cantidad: nuevaCantidad })
+        body: JSON.stringify({ cantidad: nuevaCantidad })
     });
     verCarrito();
 }
 
 async function eliminarDelCarrito(detalleId) {
-    await fetch(`${API}/carrito/eliminar/${detalleId}`, { method: 'DELETE' });
+    await fetchWithAuth(`${API}/carrito/items/${detalleId}`, { method: 'DELETE' });
     verCarrito();
     actualizarContadorCarrito();
 }
 
 async function vaciarCarrito() {
     if(confirm('¿Vaciar carrito?')) {
-        await fetch(`${API}/carrito/vaciar`, { method: 'DELETE' });
+        await fetchWithAuth(`${API}/carrito`, { method: 'DELETE' });
         verCarrito();
         actualizarContadorCarrito();
     }
@@ -151,7 +153,7 @@ async function vaciarCarrito() {
 
 async function realizarPedido() {
     try {
-        const res = await fetch(`${API}/pedidos`, { method: 'POST' });
+        const res = await fetchWithAuth(`${API}/pedidos/confirmar`, { method: 'POST' });
         if (res.ok) {
             alert('¡Pedido realizado con éxito!');
             cerrarCarrito();
@@ -223,7 +225,7 @@ async function cerrarSesion() {
 async function verPedidos() {
     if (!userSession.loggedIn) return mostrarLogin();
     document.getElementById('pedidosModal').classList.remove('hidden');
-    const res = await fetch(`${API}/pedidos`);
+    const res = await fetchWithAuth(`${API}/pedidos/mis-pedidos`);
     const pedidos = await res.json();
     
     document.getElementById('pedidosList').innerHTML = pedidos.length === 0 ? '<p>No tiene pedidos</p>' :
@@ -247,7 +249,7 @@ function cerrarPedidos() { document.getElementById('pedidosModal').classList.add
 
 // --- ADMIN PANEL ---
 async function cargarProductosAdmin() {
-    const res = await fetch(`${API}/productos/todos`);
+    const res = await fetchWithAuth(`${API}/productos/todos`);
     const productos = await res.json();
     const tbody = document.getElementById('adminTableBody');
     tbody.innerHTML = productos.map(p => `
@@ -266,7 +268,7 @@ async function cargarProductosAdmin() {
 }
 
 async function toggleProducto(id, accion) {
-    await fetch(`${API}/productos/${id}/${accion}`, { method: 'PUT' });
+    await fetchWithAuth(`${API}/productos/${id}/${accion}`, { method: 'PUT' });
     cargarProductosAdmin();
     cargarProductos(); // Actualiza la vista pública también
 }
