@@ -76,7 +76,8 @@
             <div class="navbar-inner">
                 <a href="#" class="navbar-logo">Tech<span>Store</span></a>
                 <ul class="navbar-links" id="nav-links">
-                    <li><a href="#" class="active">Catálogo</a></li>
+                    <li><a href="#" onclick="verCatalogo()" class="active" id="navCatalogo">Catálogo</a></li>
+                    <li id="navAdmin" style="display:none;"><a href="#" onclick="verAdminPanel()">⚙️ Panel Admin</a></li>
                     <li><a href="#" onclick="verCarrito()" class="cart-badge" id="carritoBadge" data-count="0">🛒 Carrito</a></li>
                     <li><a href="#" onclick="verPedidos()">📦 Mis Pedidos</a></li>
                     <li><span id="userName" style="color:var(--primary); font-weight:bold; margin-right:1rem;"></span></li>
@@ -85,7 +86,7 @@
             </div>
         </nav>
 
-        <div class="container">
+        <div class="container" id="vistaCatalogo">
             <!-- Buscador -->
             <div class="search-bar">
                 <input type="text" id="searchInput" class="form-control" placeholder="Buscar productos por nombre..." onkeyup="if(event.key==='Enter') buscarProductos()">
@@ -99,11 +100,14 @@
             <div id="productosGrid" class="product-grid">
                 <!-- Productos cargados por app.js -->
             </div>
+        </div>
 
+        <div class="container" id="vistaAdmin" style="display:none;">
             <!-- Panel Admin (Solo visible si es ADMIN) -->
-            <div id="adminSection" class="card" style="display:none; margin-top: 2rem; padding: 1.5rem;">
-                <div class="page-header">
-                    <h1>Panel de Administración</h1>
+            <div id="adminSection" class="card" style="padding: 1.5rem;">
+                <div class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem;">
+                    <h1 style="margin:0;">Panel de Administración</h1>
+                    <button class="btn btn-success" onclick="abrirModalProducto()">+ Nuevo Producto</button>
                 </div>
                 <div class="table-responsive">
                     <table class="admin-table">
@@ -111,11 +115,10 @@
                             <tr>
                                 <th>ID</th>
                                 <th>Nombre</th>
-                                <th>Categoría</th>
                                 <th>Precio</th>
                                 <th>Stock</th>
-                                <th>Estado</th>
-                                <th>Acciones</th>
+                                <th>Categoría</th>
+                                <th style="text-align:right;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="adminTableBody">
@@ -166,7 +169,53 @@
         </div>
     </div>
 
-    <script src="/js/utils.js?v=6"></script>
-    <script src="/js/app.js?v=6"></script>
+    <!-- Modal Formulario Producto -->
+    <div id="productoModal" class="modal-overlay hidden">
+        <div class="modal" style="max-width:500px;">
+            <div class="modal-header">
+                <h2 id="productoModalTitle">Nuevo Producto</h2>
+                <button class="modal-close" onclick="cerrarModalProducto()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="formProducto" onsubmit="guardarProducto(event)">
+                    <input type="hidden" id="prodId">
+                    <div class="form-group">
+                        <label>Nombre</label>
+                        <input type="text" id="prodNombre" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Descripción</label>
+                        <textarea id="prodDescripcion" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <div class="form-group" style="flex:1;">
+                            <label>Precio (S/)</label>
+                            <input type="number" id="prodPrecio" class="form-control" step="0.01" min="0" required>
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>Stock</label>
+                            <input type="number" id="prodStock" class="form-control" min="0" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Categoría</label>
+                        <select id="prodCategoria" class="form-control" required>
+                            <!-- Llenado por JS -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>URL Imagen (Opcional)</label>
+                        <input type="url" id="prodImagen" class="form-control" placeholder="https://...">
+                    </div>
+                    <div style="margin-top:1.5rem;">
+                        <button type="submit" class="btn btn-primary btn-block">GUARDAR PRODUCTO</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/utils.js?v=9"></script>
+    <script src="/js/app.js?v=9"></script>
 </body>
 </html>
