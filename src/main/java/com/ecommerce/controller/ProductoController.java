@@ -69,8 +69,10 @@ public class ProductoController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
-        productoService.eliminar(id);
-        return ResponseEntity.noContent().build();
-    }
+    public ResponseEntity<String> eliminar(@PathVariable Long id) {
+
+    productoService.eliminar(id);
+
+    return ResponseEntity.ok("Producto eliminado correctamente");
+}
 }
