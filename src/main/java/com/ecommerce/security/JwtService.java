@@ -6,8 +6,7 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
-
-import java.security.Key;
+import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,10 +21,10 @@ public class JwtService {
     @Value("${jwt.expiration}")
     private long expiration;
 
-    private Key getSigningKey() {
-        byte[] keyBytes = secret.getBytes();
-        return Keys.hmacShaKeyFor(keyBytes);
-    }
+    private SecretKey getSigningKey() {
+    byte[] keyBytes = secret.getBytes();
+    return Keys.hmacShaKeyFor(keyBytes);
+}
 
     public String generarToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
