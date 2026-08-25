@@ -3,17 +3,27 @@ let userSession = { loggedIn: false, role: '', name: '' };
 
 // Validar Sesión al cargar
 async function checkSession() {
-    const res = await fetch(`${API}/auth/me`);
-    userSession = await res.json();
-    updateUI();
-    cargarProductos();
+    const auth = getAuthData();
+    if (auth && auth.token) {
+        userSession = { loggedIn: true, role: auth.rol, name: auth.nombre };
+        updateUI();
+        cargarProductos();
+    } else {
+        userSession = { loggedIn: false, role: '', name: '' };
+        updateUI();
+        mostrarLogin(); // Forzar login a pantalla completa
+    }
 }
 
 function updateUI() {
-    document.getElementById('userName').textContent = userSession.loggedIn ? `Hola, ${userSession.name}` : '';
-    document.getElementById('btnLogin').style.display = userSession.loggedIn ? 'none' : 'inline-block';
-    document.getElementById('btnRegister').style.display = userSession.loggedIn ? 'none' : 'inline-block';
-    document.getElementById('btnLogout').style.display = userSession.loggedIn ? 'inline-block' : 'none';
+    if (userSession.loggedIn) {
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('registroSection').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        document.getElementById('userName').textContent = `Hola, ${userSession.name}`;
+    } else {
+        document.getElementById('mainApp').style.display = 'none';
+    }
     
     // Mostrar panel admin si es ADMIN
     if (userSession.role === 'ADMIN') {
@@ -157,10 +167,19 @@ async function realizarPedido() {
 function cerrarCarrito() { document.getElementById('carritoModal').classList.add('hidden'); }
 
 // --- AUTENTICACIÓN ---
-function mostrarLogin() { document.getElementById('loginModal').classList.remove('hidden'); }
-function cerrarLogin() { document.getElementById('loginModal').classList.add('hidden'); }
-function mostrarRegistro() { document.getElementById('registroModal').classList.remove('hidden'); }
-function cerrarRegistro() { document.getElementById('registroModal').classList.add('hidden'); }
+function mostrarLogin() { 
+    document.getElementById('registroSection').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('loginSection').style.display = 'flex'; 
+}
+function cerrarLogin() { document.getElementById('loginSection').style.display = 'none'; }
+
+function mostrarRegistro() { 
+    document.getElementById('loginSection').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('registroSection').style.display = 'flex'; 
+}
+function cerrarRegistro() { document.getElementById('registroSection').style.display = 'none'; }
 
 async function login(e) {
     e.preventDefault();
@@ -168,6 +187,8 @@ async function login(e) {
     try {
         const res = await fetch(`${API}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dto) });
         if (res.ok) {
+            const data = await res.json();
+            setAuthData(data); // Guardar sesión
             cerrarLogin();
             await checkSession();
             actualizarContadorCarrito();
@@ -183,8 +204,12 @@ async function registrar(e) {
         direccion: document.getElementById('regDireccion').value, telefono: document.getElementById('regTelefono').value
     };
     const res = await fetch(`${API}/auth/registro`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dto) });
-    if (res.ok) { cerrarRegistro(); alert('Registrado exitosamente. Inicie sesión.'); mostrarLogin(); }
-    else { const err = await res.json(); alert(err.error || 'Error al registrar'); }
+    if (res.ok) {
+        const data = await res.json();
+        setAuthData(data); // Auto-login después de registrarse
+        cerrarRegistro(); 
+        await checkSession();
+    } else { const err = await res.json(); alert(err.error || 'Error al registrar'); }
 }
 
 async function cerrarSesion() {
