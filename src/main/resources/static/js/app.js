@@ -23,6 +23,8 @@ function updateUI() {
         document.getElementById('userName').textContent = `Hola, ${userSession.name}`;
     } else {
         document.getElementById('mainApp').style.display = 'none';
+        document.getElementById('registroSection').style.display = 'none';
+        document.getElementById('loginSection').style.display = 'flex';
     }
     
     // Mostrar panel admin si es ADMIN
@@ -215,7 +217,8 @@ async function registrar(e) {
 }
 
 async function cerrarSesion() {
-    await fetch(`${API}/auth/logout`, { method: 'POST' });
+    try { await fetch(`${API}/auth/logout`, { method: 'POST' }); } catch(e) {}
+    localStorage.removeItem('authData');
     userSession = { loggedIn: false, role: '', name: '' };
     updateUI();
     document.getElementById('carritoCount').textContent = '0';
