@@ -1,0 +1,46 @@
+AUTORIZACIÓN bearer token :
+
+CREAR UN CLIENTE 
+
+Content-Type - application/json
+
+
+POST http://localhost:8080/api/auth/registro
+
+
+{
+  "nombre": "Melandy",
+  "email": "melandy@gmail.com",
+  "password": "123456",
+  "direccion": "Ayacucho",
+  "telefono": "987654321"
+}
+
+lISTAR 
+
+GET http://localhost:8080/api/productos
+GET http://localhost:8080/api/productos/1
+
+
+PUT http://localhost:8080/api/productos/1
+
+DELETE http://localhost:8080/api/productos/1
+
+AHORA PROBAR CON ADMIN:
+
+POST http://localhost:8080/api/auth/login
+
+{
+  "email": "admin@ecommerce.com",
+  "password": "admin123"
+}
+
+
+POST http://localhost:8080/api/productos
+
+{
+  "nombre": "Laptop Gamer",
+  "descripcion": "RTX 4060",
+  "precio": 4500,
+  "stock": 10
+}
