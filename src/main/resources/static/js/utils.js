@@ -31,7 +31,7 @@ function logout() {
 }
 
 function formatCurrency(amount) {
-    return '$' + Number(amount).toFixed(2);
+    return 'S/ ' + Number(amount).toFixed(2);
 }
 
 async function fetchWithAuth(url, options = {}) {
