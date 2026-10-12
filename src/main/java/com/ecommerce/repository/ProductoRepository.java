@@ -1,15 +1,3 @@
 package com.ecommerce.repository;
-
-import com.ecommerce.entity.Producto;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-
-import java.util.List;
-
-public interface ProductoRepository extends JpaRepository<Producto, Long> {
-    List<Producto> findByCategoriaId(Long categoriaId);
-
-    @Query("SELECT p FROM Producto p WHERE LOWER(p.nombre) LIKE LOWER(CONCAT('%', :query, '%'))")
-    List<Producto> buscarPorNombre(@Param("query") String query);
-}
+import com.ecommerce.entity.Producto; import org.springframework.data.jpa.repository.*; import org.springframework.data.repository.query.Param; import jakarta.persistence.LockModeType; import java.util.List;
+public interface ProductoRepository extends JpaRepository<Producto,Long>{ List<Producto> findByCategoriaId(Long categoriaId); @Query("select p from Producto p where lower(p.nombre) like lower(concat('%',:query,'%'))") List<Producto> buscarPorNombre(@Param("query") String query); @Lock(LockModeType.PESSIMISTIC_WRITE) @Query("select p from Producto p where p.id=:id") java.util.Optional<Producto> findByIdForUpdate(@Param("id") Long id); }
