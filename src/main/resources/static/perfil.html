@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mi Perfil | TechStore</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <header class="topbar">
+        <nav class="nav">
+            <a class="brand" href="/index.html">Tech<span>Store</span></a>
+            <div id="navlinks" class="navlinks"></div>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div id="alerts"></div>
+
+        <section class="hero" style="grid-template-columns: 1fr; margin-bottom:20px">
+            <div class="hero-card" style="padding:24px 30px">
+                <span class="badge">MI CUENTA</span>
+                <h1 style="margin:8px 0 4px">Gestión de Perfil y Seguridad</h1>
+                <p class="muted" style="margin:0">
+                    Actualiza tus datos de contacto obligatorios para tus compras y cambia tu contraseña ingresando la actual.
+                </p>
+            </div>
+        </section>
+
+        <div class="profile-grid">
+            <!-- FORMULARIO 1: DATOS PERSONALES -->
+            <section class="panel">
+                <div class="order-head">
+                    <div>
+                        <span class="badge">INFORMACIÓN</span>
+                        <h2 style="margin:6px 0 0">Datos Personales</h2>
+                    </div>
+                    <span id="userRoleBadge" class="status info">ROL</span>
+                </div>
+                <p class="muted" style="font-size:0.88rem; margin:0 0 16px">
+                    La dirección y el teléfono son <b>obligatorios</b> para procesar envíos de tus pedidos.
+                </p>
+
+                <form id="profileForm">
+                    <div class="field">
+                        <label>Nombre Completo <span class="req">* (Obligatorio)</span></label>
+                        <input id="nombre" class="form-control" required minlength="2" maxlength="80">
+                    </div>
+
+                    <div class="field">
+                        <label>Correo Electrónico (No modificable)</label>
+                        <input id="email" class="form-control" disabled style="opacity:0.75">
+                    </div>
+
+                    <div class="field">
+                        <label>Dirección de Domicilio / Envío <span class="req">* (Obligatorio)</span></label>
+                        <input id="direccion" class="form-control" required minlength="5" maxlength="180" placeholder="Ej: Jr. Ayacucho 450, Huamanga">
+                    </div>
+
+                    <div class="field">
+                        <label>Teléfono Celular <span class="req">* (Obligatorio)</span></label>
+                        <input id="telefono" class="form-control" required pattern="[0-9+ -]{7,20}" placeholder="Ej: 987654321">
+                    </div>
+
+                    <div class="toolbar" style="margin-top:20px; justify-content:flex-end">
+                        <button id="btnSaveProfile" type="submit" class="btn btn-primary">
+                            💾 Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- FORMULARIO 2: CAMBIAR CONTRASEÑA -->
+            <section class="panel">
+                <div>
+                    <span class="badge" style="background:rgba(255,176,32,0.15); color:#ffd074; border-color:rgba(255,176,32,0.35)">
+                        SEGURIDAD
+                    </span>
+                    <h2 style="margin:6px 0 0">Cambiar Contraseña</h2>
+                </div>
+                <p class="muted" style="font-size:0.88rem; margin:6px 0 16px">
+                    Para cambiar tu contraseña es obligatorio que ingreses tu <b>contraseña actual</b>.
+                </p>
+
+                <form id="passwordForm">
+                    <div class="field">
+                        <label>Contraseña Actual <span class="req">* (Obligatoria)</span></label>
+                        <input id="passwordActual" type="password" class="form-control" required placeholder="Tu contraseña vigente">
+                    </div>
+
+                    <div class="field">
+                        <label>Nueva Contraseña <span class="req">* (Mínimo 8 caracteres)</span></label>
+                        <input id="passwordNueva" type="password" minlength="8" maxlength="72" class="form-control" required placeholder="Mínimo 8 caracteres">
+                    </div>
+
+                    <div class="field">
+                        <label>Confirmar Nueva Contraseña <span class="req">*</span></label>
+                        <input id="passwordConfirmar" type="password" minlength="8" maxlength="72" class="form-control" required placeholder="Repite la nueva contraseña">
+                    </div>
+
+                    <div class="toolbar" style="margin-top:20px; justify-content:flex-end">
+                        <button id="btnChangePassword" type="submit" class="btn btn-warn">
+                            🔐 Actualizar Contraseña
+                        </button>
+                    </div>
+                </form>
+            </section>
+        </div>
+    </main>
+
+    <footer class="footer">
+        TechStore &copy; 2026 &middot; Perfil y Privacidad
+    </footer>
+
+    <script src="/js/utils.js"></script>
+    <script>
+        nav('perfil');
+        if (!requireAuth()) throw 0;
+
+        async function loadProfile() {
+            try {
+                const user = await json('/api/perfil');
+                document.getElementById('nombre').value = user.nombre || '';
+                document.getElementById('email').value = user.email || '';
+                document.getElementById('direccion').value = user.direccion || '';
+                document.getElementById('telefono').value = user.telefono || '';
+                
+                const roleBadge = document.getElementById('userRoleBadge');
+                roleBadge.textContent = user.rol;
+                roleBadge.className = 'status ' + (user.rol === 'ADMIN' ? 'warn' : 'ok');
+            } catch (e) {
+                alertBox(e.message, 'error');
+            }
+        }
+
+        // GUARDAR DATOS DEL PERFIL
+        document.getElementById('profileForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const nom = document.getElementById('nombre').value.trim();
+            const dir = document.getElementById('direccion').value.trim();
+            const tel = document.getElementById('telefono').value.trim();
+
+            if (!dir || dir.length < 5) {
+                alertBox('La dirección es obligatoria y debe ser válida', 'error');
+                return;
+            }
+            if (!tel || tel.length < 7) {
+                alertBox('El teléfono es obligatorio y debe tener al menos 7 dígitos', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btnSaveProfile');
+            btn.disabled = true;
+            btn.textContent = 'Guardando...';
+
+            try {
+                const updated = await json('/api/perfil', {
+                    method: 'PUT',
+                    body: {
+                        nombre: nom,
+                        direccion: dir,
+                        telefono: tel
+                    }
+                });
+
+                // Actualizar nombre en sesión local
+                const currentAuth = auth();
+                if (currentAuth) {
+                    currentAuth.nombre = updated.nombre;
+                    saveAuth(currentAuth);
+                    nav('perfil');
+                }
+
+                alertBox('Perfil actualizado exitosamente', 'ok');
+            } catch (err) {
+                alertBox(err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '💾 Guardar Cambios';
+            }
+        };
+
+        // CAMBIAR CONTRASEÑA EXIGIENDO LA ACTUAL
+        document.getElementById('passwordForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const actual = document.getElementById('passwordActual').value;
+            const nueva = document.getElementById('passwordNueva').value;
+            const confirmar = document.getElementById('passwordConfirmar').value;
+
+            if (!actual) {
+                alertBox('Debes ingresar tu contraseña actual', 'error');
+                return;
+            }
+            if (nueva.length < 8) {
+                alertBox('La nueva contraseña debe tener mínimo 8 caracteres', 'error');
+                return;
+            }
+            if (nueva !== confirmar) {
+                alertBox('La confirmación no coincide con la nueva contraseña', 'error');
+                return;
+            }
+            if (nueva === actual) {
+                alertBox('La nueva contraseña debe ser diferente a la contraseña actual', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btnChangePassword');
+            btn.disabled = true;
+            btn.textContent = 'Actualizando...';
+
+            try {
+                await json('/api/perfil/password', {
+                    method: 'PUT',
+                    body: {
+                        passwordActual: actual,
+                        passwordNueva: nueva
+                    }
+                });
+
+                document.getElementById('passwordForm').reset();
+                alertBox('¡Contraseña actualizada con éxito!', 'ok');
+            } catch (err) {
+                alertBox(err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔐 Actualizar Contraseña';
+            }
+        };
+
+        loadProfile();
+    </script>
+</body>
+</html>
