@@ -1,221 +1,161 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TechStore - Futuro Neon</title>
-    <link rel="stylesheet" href="/css/estilos.css?v=6">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TechStore | Catálogo de Tecnología</title>
+    <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
-
-    <!-- ==================== PANTALLAS DE AUTENTICACIÓN ==================== -->
-    <div id="loginSection" class="auth-container" style="display:none;">
-        <div class="auth-card">
-            <div style="text-align:center; margin-bottom: 2rem;">
-                <h1 style="font-size: 2.5rem; margin:0;"><span style="color:white;">Tech</span><span style="color:var(--primary);">Store</span></h1>
-                <p style="color:var(--text-dim); margin-top:0.5rem;">Bienvenido de vuelta</p>
-            </div>
-            <h2 style="text-align: center; color: var(--primary); text-transform: uppercase; letter-spacing: 2px;">Iniciar Sesión</h2>
-            <form id="form-login" onsubmit="login(event)">
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" id="loginEmail" class="form-control" placeholder="tu@email.com" required>
-                </div>
-                <div class="form-group">
-                    <label>Contraseña</label>
-                    <input type="password" id="loginPassword" class="form-control" placeholder="Tu contraseña" required>
-                </div>
-                <button type="submit" class="btn btn-primary btn-block" style="margin-top: 1rem; padding: 1rem; font-size: 1.1rem;">INGRESAR</button>
-            </form>
-            <div style="text-align:center; margin-top: 1.5rem;">
-                <a href="#" style="color:var(--gray-400); text-decoration:none; font-size:0.9rem;" onclick="mostrarRegistro()">¿No tienes cuenta? <span style="color:var(--secondary);">Regístrate aquí</span></a>
-            </div>
-        </div>
-    </div>
-
-    <div id="registroSection" class="auth-container" style="display:none;">
-        <div class="auth-card" style="max-width: 500px;">
-            <div style="text-align:center; margin-bottom: 1.5rem;">
-                <h1 style="font-size: 2rem; margin:0;"><span style="color:white;">Tech</span><span style="color:var(--primary);">Store</span></h1>
-            </div>
-            <h2 style="text-align: center; color: var(--secondary); text-transform: uppercase; letter-spacing: 2px;">Crear Cuenta</h2>
-            <form id="form-registro" onsubmit="registrar(event)">
-                <div class="form-group">
-                    <label>Nombre Completo</label>
-                    <input type="text" id="regNombre" class="form-control" placeholder="Ej: Renzo Perez" required>
-                </div>
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" id="regEmail" class="form-control" placeholder="tu@email.com" required>
-                </div>
-                <div class="form-group">
-                    <label>Contraseña</label>
-                    <input type="password" id="regPassword" class="form-control" placeholder="Mínimo 6 caracteres" required minlength="6">
-                </div>
-                <div style="display:flex; gap:10px;">
-                    <div class="form-group" style="flex:1;">
-                        <label>Teléfono</label>
-                        <input type="text" id="regTelefono" class="form-control">
-                    </div>
-                    <div class="form-group" style="flex:1;">
-                        <label>Dirección</label>
-                        <input type="text" id="regDireccion" class="form-control">
-                    </div>
-                </div>
-                <button type="submit" class="btn btn-secondary btn-block" style="margin-top: 1rem; padding: 1rem; font-size: 1.1rem;">REGISTRARSE</button>
-            </form>
-            <div style="text-align:center; margin-top: 1.5rem;">
-                <a href="#" style="color:var(--gray-400); text-decoration:none; font-size:0.9rem;" onclick="mostrarLogin()">¿Ya tienes cuenta? <span style="color:var(--primary);">Ingresa aquí</span></a>
-            </div>
-        </div>
-    </div>
-
-    <!-- ==================== APLICACIÓN PRINCIPAL (OCULTA HASTA LOGIN) ==================== -->
-    <div id="mainApp" style="display:none;">
-        <nav class="navbar">
-            <div class="navbar-inner">
-                <a href="#" class="navbar-logo">Tech<span>Store</span></a>
-                <ul class="navbar-links" id="nav-links">
-                    <li><a href="#" onclick="verCatalogo()" class="active" id="navCatalogo">Catálogo</a></li>
-                    <li id="navAdmin" style="display:none;"><a href="#" onclick="verAdminPanel()">⚙️ Panel Admin</a></li>
-                    <li><a href="#" onclick="verCarrito()" class="cart-badge" id="carritoBadge" data-count="0">🛒 Carrito</a></li>
-                    <li><a href="#" onclick="verPedidos()">📦 Mis Pedidos</a></li>
-                    <li><span id="userName" style="color:var(--primary); font-weight:bold; margin-right:1rem;"></span></li>
-                    <li><button id="btnLogout" class="btn-logout" onclick="cerrarSesion()">Salir</button></li>
-                </ul>
-            </div>
+    <header class="topbar">
+        <nav class="nav">
+            <a class="brand" href="/index.html">Tech<span>Store</span></a>
+            <div id="navlinks" class="navlinks"></div>
         </nav>
+    </header>
 
-        <div class="container" id="vistaCatalogo">
-            <!-- Buscador -->
-            <div class="search-bar">
-                <input type="text" id="searchInput" class="form-control" placeholder="Buscar productos por nombre..." onkeyup="if(event.key==='Enter') buscarProductos()">
-                <button class="btn btn-primary" onclick="buscarProductos()">Buscar</button>
-                <select id="categoriaFilter" class="form-control" onchange="filtrarPorCategoria()">
-                    <option value="">Todas las categorías</option>
-                </select>
-            </div>
+    <main class="container">
+        <div id="alerts"></div>
 
-            <!-- Catálogo Grid -->
-            <div id="productosGrid" class="product-grid">
-                <!-- Productos cargados por app.js -->
-            </div>
-        </div>
-
-        <div class="container" id="vistaAdmin" style="display:none;">
-            <!-- Panel Admin (Solo visible si es ADMIN) -->
-            <div id="adminSection" class="card" style="padding: 1.5rem;">
-                <div class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem;">
-                    <h1 style="margin:0;">Panel de Administración</h1>
-                    <button class="btn btn-success" onclick="abrirModalProducto()">+ Nuevo Producto</button>
-                </div>
-                <div class="table-responsive">
-                    <table class="admin-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Nombre</th>
-                                <th>Precio</th>
-                                <th>Stock</th>
-                                <th>Categoría</th>
-                                <th style="text-align:right;">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="adminTableBody">
-                        </tbody>
-                    </table>
+        <section class="hero">
+            <div class="hero-card">
+                <span class="badge">E-COMMERCE TECHSTORE</span>
+                <h1>Compra tecnología de punta al instante.</h1>
+                <p>Descubre smartphones, laptops de alta gama, accesorios y componentes con stock en tiempo real y múltiples métodos de pago seguros.</p>
+                <div class="toolbar">
+                    <a class="btn btn-primary" href="#catalogo">Ver productos</a>
+                    <a class="btn btn-outline" href="/registro.html">Crear cuenta</a>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Modal Carrito -->
-    <div id="carritoModal" class="modal-overlay hidden">
-        <div class="modal">
-            <div class="modal-header">
-                <h2>Tu Carrito</h2>
-                <button class="modal-close" onclick="cerrarCarrito()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div id="carritoItems" class="cart-items">
-                    <!-- Items del carrito -->
+            <div class="hero-card">
+                <h3>Garantía y Seguridad</h3>
+                <p>Todos los pedidos cuentan con seguimiento en vivo, verificación de pagos por administración y entrega garantizada.</p>
+                <div class="stats" style="grid-template-columns: 1fr 1fr;">
+                    <div class="stat"><small>Catálogo</small><strong>100%</strong></div>
+                    <div class="stat"><small>Pagos</small><strong>Yape / Tarjeta</strong></div>
                 </div>
             </div>
-            <div class="modal-footer" style="justify-content: space-between; align-items: center;">
+        </section>
+
+        <section id="catalogo" class="panel">
+            <div class="order-head">
                 <div>
-                    <span style="color:var(--text-dim); font-size:0.9rem;">Total:</span>
-                    <strong style="color:var(--primary); font-size:1.5rem; margin-left:10px;">S/ <span id="carritoTotal">0.00</span></strong>
+                    <span class="badge">EXPLORAR</span>
+                    <h2 style="margin:6px 0 0">Catálogo de Productos</h2>
                 </div>
-                <div>
-                    <button class="btn btn-danger" onclick="vaciarCarrito()">Vaciar</button>
-                    <button class="btn btn-success" onclick="realizarPedido()">Confirmar Compra</button>
+                <div class="toolbar" style="margin:0">
+                    <input id="q" class="input search" placeholder="Buscar producto o especificación..." oninput="filter()">
+                    <select id="cat" class="select" style="max-width:240px" onchange="filter()">
+                        <option value="">Todas las categorías</option>
+                    </select>
+                    <button class="btn btn-outline" onclick="loadProducts()">Actualizar</button>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Modal Pedidos -->
-    <div id="pedidosModal" class="modal-overlay hidden">
-        <div class="modal" style="max-width:700px;">
-            <div class="modal-header">
-                <h2>Mis Pedidos</h2>
-                <button class="modal-close" onclick="cerrarPedidos()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div id="pedidosList" class="orders-list">
-                    <!-- Pedidos cargados aquí -->
-                </div>
-            </div>
-        </div>
-    </div>
+            <div id="products" class="grid" style="margin-top:20px"></div>
+        </section>
+    </main>
 
-    <!-- Modal Formulario Producto -->
-    <div id="productoModal" class="modal-overlay hidden">
-        <div class="modal" style="max-width:500px;">
-            <div class="modal-header">
-                <h2 id="productoModalTitle">Nuevo Producto</h2>
-                <button class="modal-close" onclick="cerrarModalProducto()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="formProducto" onsubmit="guardarProducto(event)">
-                    <input type="hidden" id="prodId">
-                    <div class="form-group">
-                        <label>Nombre</label>
-                        <input type="text" id="prodNombre" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Descripción</label>
-                        <textarea id="prodDescripcion" class="form-control" rows="3"></textarea>
-                    </div>
-                    <div style="display:flex; gap:10px;">
-                        <div class="form-group" style="flex:1;">
-                            <label>Precio (S/)</label>
-                            <input type="number" id="prodPrecio" class="form-control" step="0.01" min="0" required>
+    <footer class="footer">
+        TechStore &copy; 2026 &middot; Sistema E-Commerce Completo &middot; Spring Boot + JPA + MySQL + Security
+    </footer>
+
+    <script src="/js/utils.js"></script>
+    <script>
+        nav('index');
+        let products = [];
+
+        async function loadProducts() {
+            const container = document.getElementById('products');
+            container.innerHTML = '<div class="empty">Cargando productos del catálogo...</div>';
+
+            try {
+                // Se listan solos al abrir la vista
+                const [prodsData, catsData] = await Promise.all([
+                    json('/api/productos'),
+                    json('/api/productos/categorias')
+                ]);
+
+                products = Array.isArray(prodsData) ? prodsData : [];
+                
+                const catSelect = document.getElementById('cat');
+                catSelect.innerHTML = '<option value="">Todas las categorías</option>' +
+                    catsData.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+
+                render(products);
+            } catch (e) {
+                container.innerHTML = '<div class="alert error">No se pudo cargar el catálogo de productos: ' + esc(e.message) + '</div>';
+                alertBox(e.message, 'error');
+            }
+        }
+
+        function render(list) {
+            const container = document.getElementById('products');
+            const q = (document.getElementById('q').value || '').trim().toLowerCase();
+            const c = document.getElementById('cat').value;
+
+            const filtered = list.filter(p => {
+                const matchQuery = !q ||
+                    (p.nombre && p.nombre.toLowerCase().includes(q)) ||
+                    (p.descripcion && p.descripcion.toLowerCase().includes(q));
+                const matchCat = !c || String(p.categoriaId) === c;
+                return matchQuery && matchCat;
+            });
+
+            if (!filtered.length) {
+                container.innerHTML = '<div class="empty">No se encontraron productos disponibles con ese criterio.</div>';
+                return;
+            }
+
+            container.innerHTML = filtered.map(p => `
+                <article class="product">
+                    <img src="${esc(p.imagenUrl || 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600&h=600&fit=crop')}"
+                         alt="${esc(p.nombre)}"
+                         onerror="this.src='https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600&h=600&fit=crop'">
+                    <div class="product-body">
+                        <span class="badge">${esc(p.categoriaNombre || 'General')}</span>
+                        <h3>${esc(p.nombre)}</h3>
+                        <p class="muted" style="font-size:0.88rem; line-height:1.4; margin:0 0 10px">
+                            ${esc(p.descripcion || 'Sin descripción detallada')}
+                        </p>
+                        <div class="price">${money(p.precio)}</div>
+                        <p class="stock ${p.stock <= 0 ? 'out' : ''}">
+                            ${p.stock > 0 ? 'Stock disponible: ' + p.stock + ' uds.' : 'Agotado'}
+                        </p>
+                        <div class="actions">
+                            <a class="btn btn-outline btn-sm" href="/detalle-producto.html?id=${p.id}">Ver detalle</a>
+                            <button class="btn btn-primary btn-sm" ${p.stock <= 0 ? 'disabled' : ''} onclick="addToCart(${p.id})">
+                                ${p.stock <= 0 ? 'Agotado' : 'Añadir al carrito'}
+                            </button>
                         </div>
-                        <div class="form-group" style="flex:1;">
-                            <label>Stock</label>
-                            <input type="number" id="prodStock" class="form-control" min="0" required>
-                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Categoría</label>
-                        <select id="prodCategoria" class="form-control" required>
-                            <!-- Llenado por JS -->
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>URL Imagen (Opcional)</label>
-                        <input type="url" id="prodImagen" class="form-control" placeholder="https://...">
-                    </div>
-                    <div style="margin-top:1.5rem;">
-                        <button type="submit" class="btn btn-primary btn-block">GUARDAR PRODUCTO</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+                </article>
+            `).join('');
+        }
 
-    <script src="/js/utils.js?v=9"></script>
-    <script src="/js/app.js?v=9"></script>
+        function filter() {
+            render(products);
+        }
+
+        async function addToCart(id) {
+            if (!auth()) {
+                alertBox('Debes iniciar sesión para agregar productos al carrito', 'error');
+                setTimeout(() => location.href = '/login.html', 1200);
+                return;
+            }
+            try {
+                await json('/api/carrito/items', {
+                    method: 'POST',
+                    body: { productoId: id, cantidad: 1 }
+                });
+                alertBox('Producto agregado al carrito con éxito', 'ok');
+            } catch (e) {
+                alertBox(e.message, 'error');
+            }
+        }
+
+        // Carga automática inmediata de los productos al abrir la página
+        document.addEventListener('DOMContentLoaded', loadProducts);
+    </script>
 </body>
 </html>
