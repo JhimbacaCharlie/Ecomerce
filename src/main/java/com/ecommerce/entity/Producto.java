@@ -29,6 +29,9 @@ public class Producto {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal precio;
 
+    @Column(nullable = false, precision = 10, scale = 2, columnDefinition = "decimal(10,2) default 0")
+    private BigDecimal costoUnitario = BigDecimal.ZERO;
+
     @Column(nullable = false)
     private Integer stock;
 
@@ -52,6 +55,9 @@ public class Producto {
 
     public BigDecimal getPrecio() { return precio; }
     public void setPrecio(BigDecimal precio) { this.precio = precio; }
+
+    public BigDecimal getCostoUnitario() { return costoUnitario; }
+    public void setCostoUnitario(BigDecimal costoUnitario) { this.costoUnitario = costoUnitario == null ? BigDecimal.ZERO : costoUnitario; }
 
     public Integer getStock() { return stock; }
     public void setStock(Integer stock) { this.stock = stock; }
