@@ -1,0 +1,5 @@
+package com.ecommerce.service;
+import com.ecommerce.entity.Producto; import com.ecommerce.exception.BadRequestException; import com.ecommerce.exception.ResourceNotFoundException; import com.ecommerce.repository.ProductoRepository; import org.springframework.stereotype.Service; import org.springframework.transaction.annotation.Transactional; import java.util.concurrent.ConcurrentHashMap; import java.util.concurrent.ConcurrentMap;
+@Service public class InventarioService { private final ProductoRepository productos; private final ConcurrentMap<Long,Object> locks=new ConcurrentHashMap<>(); public InventarioService(ProductoRepository p){productos=p;}
+ @Transactional public synchronized void descontarStock(Long id,int cantidad){ if(cantidad<=0)throw new BadRequestException("Cantidad invalida"); Object lock=locks.computeIfAbsent(id,k->new Object()); synchronized(lock){Producto p=productos.findByIdForUpdate(id).orElseThrow(()->new ResourceNotFoundException("Producto no encontrado: "+id)); if(p.getStock()<cantidad)throw new BadRequestException("Stock insuficiente para "+p.getNombre());p.setStock(p.getStock()-cantidad);productos.save(p);}}
+}
