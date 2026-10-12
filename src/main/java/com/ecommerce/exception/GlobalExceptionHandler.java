@@ -7,6 +7,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -42,6 +43,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
         return construirRespuesta(HttpStatus.FORBIDDEN, "No tiene permisos para realizar esta accion");
     }
+
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<Map<String,Object>> handleUnauthorized(UnauthorizedException ex){return construirRespuesta(HttpStatus.UNAUTHORIZED,ex.getMessage());}
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String,Object>> handleMalformed(HttpMessageNotReadableException ex){return construirRespuesta(HttpStatus.BAD_REQUEST,"Solicitud invalida o formato incorrecto");}
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneralException(Exception ex) {
