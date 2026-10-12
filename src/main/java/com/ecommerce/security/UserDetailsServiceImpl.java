@@ -33,4 +33,4 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 Arrays.asList(authority)
         );
     }
-}
+}// melandy-Serendipia 
