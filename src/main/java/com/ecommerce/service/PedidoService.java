@@ -1,153 +1,129 @@
 package com.ecommerce.service;
 
-import com.ecommerce.dto.ActualizarEstadoPedidoRequest;
-import com.ecommerce.dto.DetallePedidoResponse;
-import com.ecommerce.dto.PedidoResponse;
-import com.ecommerce.entity.Carrito;
-import com.ecommerce.entity.DetalleCarrito;
-import com.ecommerce.entity.DetallePedido;
-import com.ecommerce.entity.Pedido;
-import com.ecommerce.entity.Usuario;
-import com.ecommerce.enums.EstadoPedido;
-import com.ecommerce.exception.BadRequestException;
+import com.ecommerce.dto.CategoriaResponse;
+import com.ecommerce.dto.ProductoRequest;
+import com.ecommerce.dto.ProductoResponse;
+import com.ecommerce.entity.Categoria;
+import com.ecommerce.entity.Producto;
 import com.ecommerce.exception.ResourceNotFoundException;
-import com.ecommerce.repository.CarritoRepository;
-import com.ecommerce.repository.PedidoRepository;
-import com.ecommerce.repository.UsuarioRepository;
+import com.ecommerce.repository.CategoriaRepository;
+import com.ecommerce.repository.ProductoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
-public class PedidoService {
+public class ProductoService {
 
-    private final PedidoRepository pedidoRepository;
-    private final CarritoRepository carritoRepository;
-    private final UsuarioRepository usuarioRepository;
+    private final ProductoRepository productoRepository;
+    private final CategoriaRepository categoriaRepository;
 
-    public PedidoService(PedidoRepository pedidoRepository, CarritoRepository carritoRepository,
-                         UsuarioRepository usuarioRepository) {
-        this.pedidoRepository = pedidoRepository;
-        this.carritoRepository = carritoRepository;
-        this.usuarioRepository = usuarioRepository;
+    public ProductoService(ProductoRepository productoRepository, CategoriaRepository categoriaRepository) {
+        this.productoRepository = productoRepository;
+        this.categoriaRepository = categoriaRepository;
     }
 
     @Transactional
-    public PedidoResponse confirmarPedido(String email) {
-        Usuario usuario = obtenerUsuario(email);
-        Carrito carrito = carritoRepository.findByUsuarioId(usuario.getId())
-                .orElseThrow(() -> new BadRequestException("No existe un carrito para este usuario"));
+    public ProductoResponse crear(ProductoRequest request) {
+        Producto producto = new Producto();
+        producto.setNombre(request.getNombre());
+        producto.setDescripcion(request.getDescripcion());
+        producto.setPrecio(request.getPrecio());
+        producto.setCostoUnitario(request.getCostoUnitario());
+        producto.setStock(request.getStock());
+        producto.setImagenUrl(request.getImagenUrl());
 
-        if (carrito.getDetalles().isEmpty()) {
-            throw new BadRequestException("El carrito esta vacio");
+        if (request.getCategoriaId() != null) {
+            Categoria categoria = categoriaRepository.findById(request.getCategoriaId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Categoria no encontrada con id: " + request.getCategoriaId()));
+            producto.setCategoria(categoria);
         }
 
-        Pedido pedido = new Pedido();
-        pedido.setUsuario(usuario);
-        pedido.setEstado(EstadoPedido.PENDIENTE);
-        pedido.setDetalles(new ArrayList<>());
-
-        BigDecimal total = BigDecimal.ZERO;
-
-        for (DetalleCarrito dc : carrito.getDetalles()) {
-            if (dc.getProducto().getStock() < dc.getCantidad()) {
-                throw new BadRequestException("Stock insuficiente para el producto: " + dc.getProducto().getNombre());
-            }
-
-            dc.getProducto().setStock(dc.getProducto().getStock() - dc.getCantidad());
-
-            DetallePedido dp = new DetallePedido();
-            dp.setPedido(pedido);
-            dp.setProducto(dc.getProducto());
-            dp.setCantidad(dc.getCantidad());
-            dp.setPrecioUnitario(dc.getPrecioUnitario());
-            BigDecimal subtotal = dc.getPrecioUnitario().multiply(BigDecimal.valueOf(dc.getCantidad()));
-            dp.setSubtotal(subtotal);
-            pedido.getDetalles().add(dp);
-            total = total.add(subtotal);
-        }
-
-        pedido.setTotal(total);
-        pedidoRepository.save(pedido);
-
-        carrito.getDetalles().clear();
-        carritoRepository.save(carrito);
-
-        return convertirAPedidoResponse(pedido);
+        producto = productoRepository.save(producto);
+        return convertirAProductoResponse(producto);
     }
 
     @Transactional(readOnly = true)
-    public List<PedidoResponse> listarPedidosUsuario(String email) {
-        Usuario usuario = obtenerUsuario(email);
-        return pedidoRepository.findByUsuarioIdOrderByFechaPedidoDesc(usuario.getId()).stream()
-                .map(this::convertirAPedidoResponse)
-                .toList();
+    public List<ProductoResponse> listar() {
+        return productoRepository.findAll().stream()
+                .map(this::convertirAProductoResponse)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public PedidoResponse obtenerPedidoUsuario(String email, Long pedidoId) {
-        Usuario usuario = obtenerUsuario(email);
-        Pedido pedido = pedidoRepository.findById(pedidoId)
-                .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado con id: " + pedidoId));
-
-        if (!pedido.getUsuario().getId().equals(usuario.getId())) {
-            throw new ResourceNotFoundException("Pedido no encontrado con id: " + pedidoId);
-        }
-
-        return convertirAPedidoResponse(pedido);
-    }
-
-    @Transactional(readOnly = true)
-    public List<PedidoResponse> listarTodosLosPedidos() {
-        return pedidoRepository.findAll().stream()
-                .map(this::convertirAPedidoResponse)
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public PedidoResponse obtenerPedido(Long pedidoId) {
-        Pedido pedido = pedidoRepository.findById(pedidoId)
-                .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado con id: " + pedidoId));
-        return convertirAPedidoResponse(pedido);
+    public ProductoResponse obtenerPorId(Long id) {
+        Producto producto = productoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con id: " + id));
+        return convertirAProductoResponse(producto);
     }
 
     @Transactional
-    public PedidoResponse actualizarEstado(Long pedidoId, ActualizarEstadoPedidoRequest request) {
-        Pedido pedido = pedidoRepository.findById(pedidoId)
-                .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado con id: " + pedidoId));
+    public ProductoResponse actualizar(Long id, ProductoRequest request) {
+        Producto producto = productoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con id: " + id));
 
-        try {
-            EstadoPedido nuevoEstado = EstadoPedido.valueOf(request.getEstado().toUpperCase());
-            pedido.setEstado(nuevoEstado);
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Estado invalido: " + request.getEstado());
+        producto.setNombre(request.getNombre());
+        producto.setDescripcion(request.getDescripcion());
+        producto.setPrecio(request.getPrecio());
+        producto.setCostoUnitario(request.getCostoUnitario());
+        producto.setStock(request.getStock());
+        producto.setImagenUrl(request.getImagenUrl());
+
+        if (request.getCategoriaId() != null) {
+            Categoria categoria = categoriaRepository.findById(request.getCategoriaId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Categoria no encontrada con id: " + request.getCategoriaId()));
+            producto.setCategoria(categoria);
+        } else {
+            producto.setCategoria(null);
         }
 
-        pedido = pedidoRepository.save(pedido);
-        return convertirAPedidoResponse(pedido);
+        producto = productoRepository.save(producto);
+        return convertirAProductoResponse(producto);
     }
 
-    private Usuario obtenerUsuario(String email) {
-        return usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con email: " + email));
+    @Transactional
+    public void eliminar(Long id) {
+        Producto producto = productoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con id: " + id));
+        productoRepository.delete(producto);
     }
 
-    private PedidoResponse convertirAPedidoResponse(Pedido pedido) {
-        List<DetallePedidoResponse> detallesResp = new ArrayList<>();
-        for (DetallePedido dp : pedido.getDetalles()) {
-            DetallePedidoResponse dr = new DetallePedidoResponse();
-            dr.setId(dp.getId());
-            dr.setProductoNombre(dp.getProducto().getNombre());
-            dr.setCantidad(dp.getCantidad());
-            dr.setPrecioUnitario(dp.getPrecioUnitario());
-            dr.setSubtotal(dp.getSubtotal());
-            detallesResp.add(dr);
+    @Transactional(readOnly = true)
+    public List<ProductoResponse> buscar(String query) {
+        return productoRepository.buscarPorNombre(query).stream()
+                .map(this::convertirAProductoResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductoResponse> filtrarPorCategoria(Long categoriaId) {
+        return productoRepository.findByCategoriaId(categoriaId).stream()
+                .map(this::convertirAProductoResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<CategoriaResponse> listarCategorias() {
+        return categoriaRepository.findAll().stream()
+                .map(c -> new CategoriaResponse(c.getId(), c.getNombre()))
+                .collect(Collectors.toList());
+    }
+
+    private ProductoResponse convertirAProductoResponse(Producto producto) {
+        ProductoResponse response = new ProductoResponse();
+        response.setId(producto.getId());
+        response.setNombre(producto.getNombre());
+        response.setDescripcion(producto.getDescripcion());
+        response.setPrecio(producto.getPrecio());
+        response.setCostoUnitario(producto.getCostoUnitario());
+        response.setStock(producto.getStock());
+        response.setImagenUrl(producto.getImagenUrl());
+        if (producto.getCategoria() != null) {
+            response.setCategoriaNombre(producto.getCategoria().getNombre());
+            response.setCategoriaId(producto.getCategoria().getId());
         }
-
-        return new PedidoResponse(pedido.getId(), pedido.getFechaPedido(), pedido.getTotal(),
-                pedido.getEstado().name(), pedido.getDireccionEnvio(), pedido.getUsuario().getNombre(), detallesResp);
+        return response;
     }
 }
