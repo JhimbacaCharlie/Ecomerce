@@ -1,158 +1,320 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carrito - TechStore</title>
-    <link rel="stylesheet" href="/css/estilos.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Carrito de Compras | TechStore</title>
+    <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
-    <nav class="navbar">
-        <div class="navbar-inner">
-            <a href="index.html" class="navbar-logo">Tech<span>Store</span></a>
-            <ul class="navbar-links" id="nav-links"></ul>
-        </div>
-    </nav>
+    <header class="topbar">
+        <nav class="nav">
+            <a class="brand" href="/index.html">Tech<span>Store</span></a>
+            <div id="navlinks" class="navlinks"></div>
+        </nav>
+    </header>
 
-    <div class="container">
-        <div id="alert-container"></div>
-        <div class="page-header">
-            <h1>Mi Carrito</h1>
-        </div>
+    <main class="container">
+        <div id="alerts"></div>
 
-        <div id="cart-container">
-            <div class="loading"><div class="spinner"></div><br>Cargando carrito...</div>
+        <div class="panel">
+            <div class="order-head">
+                <div>
+                    <span class="badge">TU PEDIDO</span>
+                    <h1 style="margin:6px 0 0">Carrito de Compras</h1>
+                </div>
+                <a class="btn btn-outline" href="/index.html">&larr; Seguir comprando</a>
+            </div>
+
+            <!-- LISTA DE ARTÍCULOS EN EL CARRITO -->
+            <div id="cartContent" style="margin-top:20px"></div>
+
+            <!-- CONFIRMACIÓN DE DATOS DE ENVÍO OBLIGATORIOS -->
+            <div id="shippingSection" class="panel" style="display:none; background:#0a1727; margin-top:24px; border:1px solid #233e61;">
+                <span class="badge">DATOS OBLIGATORIOS</span>
+                <h3 style="margin:8px 0 6px">Dirección de Entrega y Teléfono de Contacto</h3>
+                <p class="muted" style="margin:0 0 16px; font-size:0.88rem">
+                    Por seguridad, la dirección y el teléfono son obligatorios para procesar el pedido y coordinar el despacho.
+                </p>
+                <div class="form-row">
+                    <div class="field">
+                        <label>Dirección de Envío Completa <span class="req">* (Obligatorio)</span></label>
+                        <input id="orderAddress" class="form-control" required placeholder="Av. / Jr. / Calle, Número, Depto, Ciudad">
+                    </div>
+                    <div class="field">
+                        <label>Teléfono Celular de Contacto <span class="req">* (Obligatorio)</span></label>
+                        <input id="orderPhone" class="form-control" required pattern="[0-9+ -]{7,20}" placeholder="Ej: 987654321">
+                    </div>
+                </div>
+                <div class="toolbar" style="justify-content:flex-end; margin-top:14px">
+                    <button class="btn btn-ok" onclick="submitOrder()">Confirmar Pedido y Proceder al Pago &rarr;</button>
+                </div>
+            </div>
+
+            <!-- MÓDULO DE PAGO PARA EL CLIENTE -->
+            <div id="checkoutPayment" class="panel" style="display:none; background:#0b192c; margin-top:24px; border:2px solid var(--primary);">
+                <span class="badge" style="background:rgba(79,140,255,0.25)">PASO FINAL</span>
+                <h2 style="margin:8px 0 4px">Módulo de Pago del Cliente</h2>
+                <p class="muted" style="font-size:0.9rem">
+                    Selecciona tu método de pago preferido e ingresa el código o número de operación. El administrador verificará tu pago para iniciar el envío.
+                </p>
+
+                <div class="payment-selector">
+                    <div class="pay-opt selected" data-method="YAPE" onclick="selectPayMethod('YAPE')">
+                        <span class="opt-title">💜 Yape</span>
+                        <span class="opt-desc">Billetera BCP</span>
+                    </div>
+                    <div class="pay-opt" data-method="PLIN" onclick="selectPayMethod('PLIN')">
+                        <span class="opt-title">💙 Plin</span>
+                        <span class="opt-desc">BBVA / Scotiabank / Interbank</span>
+                    </div>
+                    <div class="pay-opt" data-method="TRANSFERENCIA" onclick="selectPayMethod('TRANSFERENCIA')">
+                        <span class="opt-title">🏦 Transferencia</span>
+                        <span class="opt-desc">BCP / BBVA / Interbank</span>
+                    </div>
+                    <div class="pay-opt" data-method="TARJETA" onclick="selectPayMethod('TARJETA')">
+                        <span class="opt-title">💳 Tarjeta</span>
+                        <span class="opt-desc">Débito / Crédito</span>
+                    </div>
+                    <div class="pay-opt" data-method="EFECTIVO" onclick="selectPayMethod('EFECTIVO')">
+                        <span class="opt-title">💵 Efectivo</span>
+                        <span class="opt-desc">Contra entrega</span>
+                    </div>
+                </div>
+
+                <!-- INSTRUCCIONES DINÁMICAS SEGÚN MÉTODO -->
+                <div id="payInstructions" class="pay-instructions"></div>
+
+                <!-- FORMULARIO DE DETALLES DEL PAGO -->
+                <div class="form-row" id="paymentInputRow">
+                    <div class="field" style="flex:1">
+                        <label id="refLabel">Número de Operación / Referencia del Comprobante <span class="req">*</span></label>
+                        <input id="payReference" class="form-control" placeholder="Ej: OP-9842104" required>
+                    </div>
+                </div>
+
+                <div class="toolbar" style="margin-top:20px; justify-content:flex-end">
+                    <button id="btnSubmitPayment" class="btn btn-primary" onclick="submitClientPayment()">
+                        🚀 Enviar Pago y Registrar
+                    </button>
+                </div>
+            </div>
         </div>
-    </div>
+    </main>
+
+    <footer class="footer">
+        TechStore &copy; 2026 &middot; Pasarela de Pago Segura
+    </footer>
 
     <script src="/js/utils.js"></script>
     <script>
-        if (!isLoggedIn()) {
-            window.location.href = 'login.html';
-        }
+        nav('carrito');
+        if (!requireAuth()) throw 0;
+
+        let cartData = null;
+        let activeOrderId = null;
+        let selectedMethod = 'YAPE';
+
+        const paymentGuides = {
+            YAPE: `<b>Pagar con Yape:</b> Realiza el yapeo al número <b>987 654 321</b> a nombre de <i>TechStore Oficial</i>. Luego ingresa el número de operación que aparece en tu constancia.`,
+            PLIN: `<b>Pagar con Plin:</b> Envía el pago al número <b>987 654 321</b> (disponible en BBVA, Interbank y Scotiabank). Ingresa el código o número de operación.`,
+            TRANSFERENCIA: `<b>Transferencia Bancaria:</b><br>
+                &bull; BCP Cta Corriente: <b>191-98421034-0-12</b> (CCI: 00219100984210340125)<br>
+                &bull; BBVA Cta: <b>0011-0284-0100482910</b><br>
+                Titular: <i>TechStore S.A.C.</i>. Ingresa el número de transacción bancaria.`,
+            TARJETA: `<b>Pago con Tarjeta:</b> Aceptamos Visa, Mastercard, American Express. Ingresa los últimos 4 dígitos de tu tarjeta o el código de aprobación de tu banco.`,
+            EFECTIVO: `<b>Pago Contra Entrega en Efectivo:</b> Pagarás el importe exacto al momento de recibir tus productos. En la referencia escribe si requieres vuelto (ej: "Paga con billete de 200").`
+        };
 
         async function loadCart() {
-            const container = document.getElementById('cart-container');
+            const container = document.getElementById('cartContent');
+            container.innerHTML = '<div class="empty">Cargando carrito de compras...</div>';
 
             try {
-                const res = await fetchWithAuth('/api/carrito');
-                if (res.ok) {
-                    const data = await res.json();
-                    renderCart(data);
-                } else {
-                    container.innerHTML = '<div class="empty-state"><p>Error al cargar el carrito</p></div>';
+                // Obtener datos del carrito y del perfil (para dirección y teléfono)
+                const [cart, profile] = await Promise.all([
+                    json('/api/carrito'),
+                    json('/api/perfil')
+                ]);
+
+                cartData = cart;
+
+                // Prellenar dirección y teléfono del usuario si existen
+                if (profile) {
+                    if (profile.direccion) document.getElementById('orderAddress').value = profile.direccion;
+                    if (profile.telefono) document.getElementById('orderPhone').value = profile.telefono;
                 }
+
+                if (!cart.items || !cart.items.length) {
+                    container.innerHTML = `
+                        <div class="empty">
+                            <p style="font-size:1.15rem; margin-bottom:14px">Tu carrito está vacío.</p>
+                            <a class="btn btn-primary" href="/index.html">Explorar catálogo de productos</a>
+                        </div>
+                    `;
+                    document.getElementById('shippingSection').style.display = 'none';
+                    return;
+                }
+
+                const itemsHtml = cart.items.map(i => `
+                    <div class="cart-line">
+                        <img src="${esc(i.imagenUrl || 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&h=200&fit=crop')}"
+                             onerror="this.src='https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=200&h=200&fit=crop'">
+                        <div class="grow">
+                            <h4 style="margin:0 0 6px">${esc(i.productoNombre)}</h4>
+                            <div class="muted">${money(i.precioUnitario)} &middot; Subtotal: <b>${money(i.subtotal)}</b></div>
+                        </div>
+                        <div class="qty">
+                            <button class="btn btn-outline btn-sm" onclick="changeQty(${i.detalleId}, ${i.cantidad - 1})">&minus;</button>
+                            <span style="font-weight:700; min-width:24px; text-align:center">${i.cantidad}</span>
+                            <button class="btn btn-outline btn-sm" onclick="changeQty(${i.detalleId}, ${i.cantidad + 1})">+</button>
+                        </div>
+                        <button class="btn btn-danger btn-sm" onclick="deleteItem(${i.detalleId})" title="Eliminar producto">&times;</button>
+                    </div>
+                `).join('');
+
+                container.innerHTML = `
+                    <div class="cart-items">${itemsHtml}</div>
+                    <div style="display:flex; justify-content:flex-end; align-items:center; gap:20px; margin-top:20px; padding-top:16px; border-top:1px solid var(--border)">
+                        <div style="font-size:1.25rem">Total a Pagar: <b style="color:#72a7ff">${money(cart.total)}</b></div>
+                    </div>
+                `;
+
+                // Mostrar sección de envío obligatorio
+                document.getElementById('shippingSection').style.display = 'block';
             } catch (e) {
-                container.innerHTML = '<div class="empty-state"><p>Error de conexion</p></div>';
+                container.innerHTML = `<div class="alert error">${esc(e.message)}</div>`;
             }
         }
 
-        function renderCart(cart) {
-            const container = document.getElementById('cart-container');
+        async function changeQty(id, newQty) {
+            if (newQty < 1) return deleteItem(id);
+            try {
+                await json(`/api/carrito/items/${id}`, {
+                    method: 'PUT',
+                    body: { cantidad: newQty }
+                });
+                loadCart();
+            } catch (e) {
+                alertBox(e.message, 'error');
+            }
+        }
 
-            if (cart.items.length === 0) {
-                container.innerHTML = '<div class="cart-empty"><p>Tu carrito esta vacio</p><a href="index.html" class="btn btn-primary">Explorar productos</a></div>';
-                loadCartCount();
+        async function deleteItem(id) {
+            try {
+                await json(`/api/carrito/items/${id}`, { method: 'DELETE' });
+                alertBox('Artículo removido del carrito');
+                loadCart();
+            } catch (e) {
+                alertBox(e.message, 'error');
+            }
+        }
+
+        async function submitOrder() {
+            const address = document.getElementById('orderAddress').value.trim();
+            const phone = document.getElementById('orderPhone').value.trim();
+
+            if (!address || address.length < 5) {
+                alertBox('La dirección de envío es obligatoria y debe ser detallada', 'error');
+                document.getElementById('orderAddress').focus();
                 return;
             }
 
-            let html = '<div class="cart-layout">';
-            html += '<div class="cart-items">';
+            if (!phone || phone.length < 7) {
+                alertBox('El teléfono de contacto es obligatorio', 'error');
+                document.getElementById('orderPhone').focus();
+                return;
+            }
 
-            cart.items.forEach(item => {
-                html += '<div class="cart-item">';
-                html += '<img src="' + (item.imagenUrl || 'https://via.placeholder.com/100x100?text=Sin+Img') + '" alt="' + item.productoNombre + '" class="cart-item-img" onerror="this.src=\'https://via.placeholder.com/100x100?text=Sin+Img\'">';
-                html += '<div class="cart-item-info">';
-                html += '<h3>' + item.productoNombre + '</h3>';
-                html += '<div class="unit-price">' + formatCurrency(item.precioUnitario) + ' c/u</div>';
-                html += '<div class="cart-item-actions">';
-                html += '<button class="btn btn-secondary btn-sm" onclick="cambiarCantidad(' + item.detalleId + ', ' + (item.cantidad - 1) + ')">-</button>';
-                html += '<input type="number" class="form-control" value="' + item.cantidad + '" min="1" onchange="cambiarCantidad(' + item.detalleId + ', this.value)" style="width:60px;text-align:center">';
-                html += '<button class="btn btn-secondary btn-sm" onclick="cambiarCantidad(' + item.detalleId + ', ' + (item.cantidad + 1) + ')">+</button>';
-                html += '<button class="btn btn-danger btn-sm" onclick="eliminarItem(' + item.detalleId + ')" title="Eliminar">X</button>';
-                html += '</div></div>';
-                html += '<div class="cart-item-subtotal">';
-                html += '<div class="subtotal-label">Subtotal</div>';
-                html += '<div class="subtotal-value">' + formatCurrency(item.subtotal) + '</div>';
-                html += '</div></div>';
+            // Actualizar perfil del usuario con la dirección y teléfono ingresados
+            try {
+                const profile = await json('/api/perfil');
+                await json('/api/perfil', {
+                    method: 'PUT',
+                    body: {
+                        nombre: profile.nombre,
+                        direccion: address,
+                        telefono: phone
+                    }
+                });
+            } catch (err) {
+                console.warn('No se pudo sincronizar perfil:', err);
+            }
+
+            // Confirmar y generar el pedido
+            try {
+                const order = await json('/api/pedidos/confirmar', { method: 'POST' });
+                activeOrderId = order.id;
+
+                // Ocultar carrito y datos de envío
+                document.getElementById('cartContent').style.display = 'none';
+                document.getElementById('shippingSection').style.display = 'none';
+
+                // Mostrar sección de pago para el cliente
+                const paySec = document.getElementById('checkoutPayment');
+                paySec.style.display = 'block';
+                selectPayMethod('YAPE');
+
+                alertBox(`¡Pedido #${order.id} creado exitosamente! Ahora completa tu pago.`, 'ok');
+            } catch (e) {
+                alertBox(e.message, 'error');
+            }
+        }
+
+        function selectPayMethod(method) {
+            selectedMethod = method;
+            document.querySelectorAll('.pay-opt').forEach(el => {
+                el.classList.toggle('selected', el.dataset.method === method);
             });
 
-            html += '<div style="margin-top:1rem"><button class="btn btn-danger btn-sm" onclick="vaciarCarrito()">Vaciar carrito</button></div>';
-            html += '</div>';
+            document.getElementById('payInstructions').innerHTML = paymentGuides[method] || '';
 
-            html += '<div class="cart-summary">';
-            html += '<h2>Resumen del Pedido</h2>';
-            html += '<div class="cart-summary-row"><span>Productos (' + cart.totalItems + ')</span><span>' + formatCurrency(cart.total) + '</span></div>';
-            html += '<div class="cart-summary-row"><span>Envio</span><span style="color:var(--success);font-weight:600">Gratis</span></div>';
-            html += '<div class="cart-summary-row total"><span>Total</span><span>' + formatCurrency(cart.total) + '</span></div>';
-            html += '<button class="btn btn-success btn-block btn-lg" style="margin-top:1rem" onclick="confirmarPedido()">Confirmar Pedido</button>';
-            html += '<a href="index.html" class="btn btn-outline btn-block" style="margin-top:0.5rem">Seguir Comprando</a>';
-            html += '</div></div>';
-
-            container.innerHTML = html;
-            loadCartCount();
+            const refInput = document.getElementById('payReference');
+            if (method === 'EFECTIVO') {
+                document.getElementById('refLabel').innerHTML = 'Observaciones para la entrega (Opcional)';
+                refInput.placeholder = 'Ej: Llevar cambio para billete de 100';
+                refInput.required = false;
+            } else {
+                document.getElementById('refLabel').innerHTML = 'Número de Operación / Código de Referencia <span class="req">*</span>';
+                refInput.placeholder = 'Ej: OP-9482109';
+                refInput.required = true;
+            }
         }
 
-        async function cambiarCantidad(detalleId, nuevaCantidad) {
-            nuevaCantidad = parseInt(nuevaCantidad);
-            if (nuevaCantidad < 1) {
-                eliminarItem(detalleId);
+        async function submitClientPayment() {
+            if (!activeOrderId) {
+                alertBox('No se encontró un pedido activo para pagar', 'error');
                 return;
             }
+
+            const refValue = document.getElementById('payReference').value.trim();
+            if (selectedMethod !== 'EFECTIVO' && !refValue) {
+                alertBox('El número de operación es obligatorio para verificar su pago', 'error');
+                document.getElementById('payReference').focus();
+                return;
+            }
+
+            const btn = document.getElementById('btnSubmitPayment');
+            btn.disabled = true;
+            btn.textContent = 'Registrando pago...';
+
             try {
-                const res = await fetchWithAuth('/api/carrito/items/' + detalleId, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ cantidad: nuevaCantidad })
+                await json(`/api/pagos/pedidos/${activeOrderId}`, {
+                    method: 'POST',
+                    body: {
+                        metodoPago: selectedMethod,
+                        referencia: refValue
+                    }
                 });
-                if (res.ok) {
-                    loadCart();
-                } else {
-                    const data = await res.json();
-                    mostrarAlerta(data.mensaje || 'Error al actualizar cantidad', 'danger');
-                }
-            } catch (e) {
-                mostrarAlerta('Error de conexion', 'danger');
-            }
-        }
 
-        async function eliminarItem(detalleId) {
-            try {
-                const res = await fetchWithAuth('/api/carrito/items/' + detalleId, { method: 'DELETE' });
-                if (res.ok) {
-                    loadCart();
-                }
+                alertBox('¡Pago registrado con éxito! El administrador verificará su pago para iniciar el despacho.', 'ok');
+                setTimeout(() => {
+                    location.href = '/pedidos.html';
+                }, 1500);
             } catch (e) {
-                mostrarAlerta('Error de conexion', 'danger');
-            }
-        }
-
-        async function vaciarCarrito() {
-            if (!confirm('Seguro que deseas vaciar el carrito?')) return;
-            try {
-                const res = await fetchWithAuth('/api/carrito', { method: 'DELETE' });
-                if (res.ok) {
-                    loadCart();
-                }
-            } catch (e) {
-                mostrarAlerta('Error de conexion', 'danger');
-            }
-        }
-
-        async function confirmarPedido() {
-            if (!confirm('Deseas confirmar este pedido?')) return;
-            try {
-                const res = await fetchWithAuth('/api/pedidos/confirmar', { method: 'POST' });
-                if (res.ok) {
-                    mostrarAlerta('Pedido confirmado exitosamente!', 'success');
-                    loadCart();
-                    setTimeout(() => { window.location.href = 'pedidos.html'; }, 1500);
-                } else {
-                    const data = await res.json();
-                    mostrarAlerta(data.mensaje || 'Error al confirmar pedido', 'danger');
-                }
-            } catch (e) {
-                mostrarAlerta('Error de conexion', 'danger');
+                alertBox(e.message, 'error');
+                btn.disabled = false;
+                btn.textContent = '🚀 Enviar Pago y Registrar';
             }
         }
 
