@@ -1,133 +1,15 @@
-/* ========================================
-   UTILIDADES GLOBALES
-   ======================================== */
-
-function getAuthData() {
-    const data = localStorage.getItem('authData');
-    return data ? JSON.parse(data) : null;
-}
-
-function setAuthData(data) {
-    localStorage.setItem('authData', JSON.stringify(data));
-}
-
-function getToken() {
-    const data = getAuthData();
-    return data ? data.token : null;
-}
-
-function isLoggedIn() {
-    return getAuthData() !== null;
-}
-
-function isAdmin() {
-    const data = getAuthData();
-    return data !== null && data.rol === 'ADMIN';
-}
-
-function logout() {
-    localStorage.removeItem('authData');
-    window.location.href = 'login.html';
-}
-
-function formatCurrency(amount) {
-    return 'S/ ' + Number(amount).toFixed(2);
-}
-
-async function fetchWithAuth(url, options = {}) {
-    const token = getToken();
-    if (token) {
-        if (!options.headers) {
-            options.headers = {};
-        }
-        options.headers['Authorization'] = 'Bearer ' + token;
-    }
-    const response = await fetch(url, options);
-    if (response.status === 401) {
-        localStorage.removeItem('authData');
-        window.location.href = 'login.html';
-        throw new Error('No autorizado');
-    }
-    return response;
-}
-
-function mostrarAlerta(mensaje, tipo) {
-    let container = document.getElementById('alert-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'alert-container';
-        const main = document.querySelector('.container') || document.querySelector('.auth-container');
-        if (main) {
-            main.insertBefore(container, main.firstChild);
-        }
-    }
-    const alert = document.createElement('div');
-    alert.className = 'alert alert-' + tipo;
-    alert.textContent = mensaje;
-    container.appendChild(alert);
-    setTimeout(() => {
-        alert.remove();
-    }, 4000);
-}
-
-function getUrlParam(param) {
-    const params = new URLSearchParams(window.location.search);
-    return params.get(param);
-}
-
-function updateNavbar() {
-    const authData = getAuthData();
-    const navLinks = document.getElementById('nav-links');
-    if (!navLinks) return;
-
-    if (authData) {
-        let html = '<li><a href="index.html" class="' + (getCurrentPage() === 'index' ? 'active' : '') + '">Productos</a></li>';
-
-        if (authData.rol === 'ADMIN') {
-            html += '<li><a href="admin.html" class="' + (getCurrentPage() === 'admin' ? 'active' : '') + '">Admin</a></li>';
-        }
-
-        html += '<li><a href="carrito.html" class="cart-badge ' + (getCurrentPage() === 'carrito' ? 'active' : '') + '" data-count="0" id="cart-count-link">Carrito</a></li>';
-        html += '<li><a href="pedidos.html" class="' + (getCurrentPage() === 'pedidos' ? 'active' : '') + '">Pedidos</a></li>';
-        html += '<li><span style="font-size:0.85rem;color:var(--gray-500);margin-right:0.25rem">' + authData.nombre + '</span></li>';
-        html += '<li><button class="btn-logout" onclick="logout()">Salir</button></li>';
-        navLinks.innerHTML = html;
-        loadCartCount();
-    } else {
-        navLinks.innerHTML = '<li><a href="index.html" class="' + (getCurrentPage() === 'index' ? 'active' : '') + '">Productos</a></li>' +
-            '<li><a href="login.html" class="' + (getCurrentPage() === 'login' ? 'active' : '') + '">Ingresar</a></li>' +
-            '<li><a href="registro.html" class="' + (getCurrentPage() === 'registro' ? 'active' : '') + '">Registrarse</a></li>';
-    }
-}
-
-async function loadCartCount() {
-    if (!isLoggedIn()) return;
-    try {
-        const res = await fetchWithAuth('/api/carrito');
-        if (res.ok) {
-            const data = await res.json();
-            const link = document.getElementById('cart-count-link');
-            if (link) {
-                link.setAttribute('data-count', data.totalItems || 0);
-            }
-        }
-    } catch (e) {
-        // silencioso
-    }
-}
-
-function getCurrentPage() {
-    const path = window.location.pathname;
-    if (path.includes('index')) return 'index';
-    if (path.includes('login')) return 'login';
-    if (path.includes('registro')) return 'registro';
-    if (path.includes('detalle-producto')) return 'detalle-producto';
-    if (path.includes('carrito')) return 'carrito';
-    if (path.includes('pedidos')) return 'pedidos';
-    if (path.includes('admin')) return 'admin';
-    return '';
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    updateNavbar();
-});
+const API='/api';
+function auth(){try{return JSON.parse(localStorage.getItem('authData')||'null')}catch{return null}}
+function token(){return auth()?.token||null}
+function isAdmin(){return auth()?.rol==='ADMIN'}
+function money(v){return new Intl.NumberFormat('es-PE',{style:'currency',currency:'PEN'}).format(Number(v||0))}
+function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+function saveAuth(d){localStorage.setItem('authData',JSON.stringify(d))}
+function logout(){localStorage.removeItem('authData');location.href='/login.html'}
+async function api(url,opts={}){opts.headers={...(opts.headers||{}),...(token()?{Authorization:'Bearer '+token()}:{}),...(opts.body&&typeof opts.body!=='string'?{'Content-Type':'application/json'}:{})};if(opts.body&&typeof opts.body!=='string')opts.body=JSON.stringify(opts.body);const r=await fetch(url,opts);if(r.status===401&&token()){localStorage.removeItem('authData');location.href='/login.html';throw new Error('Sesion expirada')}return r}
+async function json(url,opts){const r=await api(url,opts);let d=null;try{d=await r.json()}catch{}if(!r.ok)throw new Error(d?.mensaje||d?.message||d?.error||Object.values(d?.errores||{})[0]||'No se pudo completar la operación');return d}
+function alertBox(msg,type='ok'){const el=document.getElementById('alerts');if(!el)return;const x=document.createElement('div');x.className='alert '+(type==='error'?'error':'ok');x.textContent=msg;el.appendChild(x);setTimeout(()=>x.remove(),4500)}
+function nav(active=''){const a=auth();const links=[['/index.html','Productos','index'],['/carrito.html','Carrito','carrito'],['/pedidos.html','Pedidos','pedidos'],['/perfil.html','Mi perfil','perfil']];if(a?.rol==='ADMIN')links.push(['/admin.html','Administración','admin']);document.getElementById('navlinks').innerHTML=links.map(x=>`<a class="${active===x[2]?'active':''}" href="${x[0]}">${x[1]}</a>`).join('')+(a?`<span class="muted">${esc(a.nombre)}</span><button class="btn btn-sm" onclick="logout()">Salir</button>`:`<a class="btn btn-primary btn-sm" href="/login.html">Ingresar</a>`)}
+function requireAuth(){if(!auth()){location.href='/login.html';return false}return true}
+function requireAdmin(){if(!isAdmin()){location.href='/index.html';return false}return true}
+function statusClass(s){return s==='CONFIRMADO'||s==='ENTREGADO'?'ok':(s==='CANCELADO'||s==='RECHAZADO'?'bad':'warn')}
