@@ -1,86 +1,229 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mis Pedidos - TechStore</title>
-    <link rel="stylesheet" href="/css/estilos.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mis Pedidos | TechStore</title>
+    <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
-    <nav class="navbar">
-        <div class="navbar-inner">
-            <a href="index.html" class="navbar-logo">Tech<span>Store</span></a>
-            <ul class="navbar-links" id="nav-links"></ul>
-        </div>
-    </nav>
+    <header class="topbar">
+        <nav class="nav">
+            <a class="brand" href="/index.html">Tech<span>Store</span></a>
+            <div id="navlinks" class="navlinks"></div>
+        </nav>
+    </header>
 
-    <div class="container">
-        <div id="alert-container"></div>
-        <div class="page-header">
-            <h1>Mis Pedidos</h1>
-        </div>
+    <main class="container">
+        <div id="alerts"></div>
 
-        <div id="orders-container">
-            <div class="loading"><div class="spinner"></div><br>Cargando pedidos...</div>
+        <div class="panel">
+            <div class="order-head">
+                <div>
+                    <span class="badge">HISTORIAL DEL CLIENTE</span>
+                    <h1 style="margin:6px 0 0">Mis Pedidos</h1>
+                </div>
+                <button class="btn btn-outline" onclick="loadMyOrders()">Actualizar</button>
+            </div>
+
+            <p class="muted" style="margin:0 0 20px; font-size:0.92rem">
+                Revisa el estado de tus compras, completa pagos pendientes y realiza el seguimiento de entrega de tus productos.
+            </p>
+
+            <div id="ordersList"></div>
+        </div>
+    </main>
+
+    <!-- MODAL PARA REGISTRAR / ACTUALIZAR PAGO -->
+    <div id="payModal" class="modal">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h2 id="payModalTitle">Registrar Pago del Pedido</h2>
+                <button class="close" onclick="closePayModal()">&times;</button>
+            </div>
+            <form id="payForm">
+                <input id="payOrderId" type="hidden">
+                <div class="field">
+                    <label>Selecciona el Método de Pago</label>
+                    <select id="modalPayMethod" class="select" onchange="updatePayGuide()">
+                        <option value="YAPE">💜 Yape (BCP)</option>
+                        <option value="PLIN">💙 Plin (BBVA / Interbank / Scotiabank)</option>
+                        <option value="TRANSFERENCIA">🏦 Transferencia Bancaria</option>
+                        <option value="TARJETA">💳 Tarjeta de Débito / Crédito</option>
+                        <option value="EFECTIVO">💵 Pago Contra Entrega en Efectivo</option>
+                    </select>
+                </div>
+                <div id="modalPayGuide" class="pay-instructions"></div>
+                <div class="field">
+                    <label id="modalRefLabel">Número de Operación / Referencia del Voucher <span class="req">*</span></label>
+                    <input id="modalPayRef" class="form-control" placeholder="Ej: OP-9842104" required>
+                </div>
+                <div class="toolbar" style="justify-content:flex-end; margin-top:20px">
+                    <button type="button" class="btn btn-outline" onclick="closePayModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Registrar Pago</button>
+                </div>
+            </form>
         </div>
     </div>
 
+    <footer class="footer">
+        TechStore &copy; 2026 &middot; Seguimiento y Compras
+    </footer>
+
     <script src="/js/utils.js"></script>
     <script>
-        if (!isLoggedIn()) {
-            window.location.href = 'login.html';
-        }
+        nav('pedidos');
+        if (!requireAuth()) throw 0;
 
-        async function loadOrders() {
-            const container = document.getElementById('orders-container');
+        const guides = {
+            YAPE: 'Paga al <b>987 654 321</b> (TechStore Oficial) y registra tu número de operación.',
+            PLIN: 'Envía tu Plin al <b>987 654 321</b> e ingresa el código de confirmación.',
+            TRANSFERENCIA: 'Transfiere a BCP Cta <b>191-98421034-0-12</b> (CCI: 00219100984210340125) e ingresa el número de operación.',
+            TARJETA: 'Ingresa los últimos 4 dígitos o el código de autorización generado por tu banco.',
+            EFECTIVO: 'Pagarás en efectivo al recibir el pedido. Escribe si requieres cambio.'
+        };
+
+        async function loadMyOrders() {
+            const container = document.getElementById('ordersList');
+            container.innerHTML = '<div class="empty">Cargando tus pedidos...</div>';
 
             try {
-                const res = await fetchWithAuth('/api/pedidos/mis-pedidos');
-                if (res.ok) {
-                    const orders = await res.json();
-                    renderOrders(orders);
-                } else {
-                    container.innerHTML = '<div class="empty-state"><p>Error al cargar pedidos</p></div>';
+                const list = await json('/api/pedidos/mis-pedidos');
+                if (!list.length) {
+                    container.innerHTML = `
+                        <div class="empty">
+                            <p style="font-size:1.15rem; margin-bottom:14px">Aún no has realizado ningún pedido.</p>
+                            <a class="btn btn-primary" href="/index.html">Explorar productos</a>
+                        </div>
+                    `;
+                    return;
                 }
+
+                container.innerHTML = list.map(p => {
+                    const isPaid = p.estadoPago === 'CONFIRMADO';
+                    const isRejected = p.estadoPago === 'RECHAZADO';
+                    const isDelivered = p.estado === 'ENTREGADO';
+
+                    return `
+                        <article class="order-card">
+                            <div class="order-head">
+                                <div>
+                                    <h3 style="margin:0 0 4px">Pedido #${p.id}</h3>
+                                    <div class="muted" style="font-size:0.85rem">
+                                        Fecha: ${new Date(p.fechaPedido).toLocaleString('es-PE')}
+                                    </div>
+                                </div>
+                                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+                                    <span class="status ${statusClass(p.estadoPago)}">Pago: ${p.estadoPago}</span>
+                                    <span class="status ${statusClass(p.estado)}">Estado: ${p.estado}</span>
+                                </div>
+                            </div>
+
+                            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin: 14px 0; font-size:0.9rem">
+                                <div>
+                                    <span class="muted">Dirección de entrega:</span><br>
+                                    <b>${esc(p.direccionEnvio || 'No especificada')}</b>
+                                </div>
+                                <div>
+                                    <span class="muted">Teléfono de contacto:</span><br>
+                                    <b>${esc(p.telefonoContacto || 'No especificado')}</b>
+                                </div>
+                                <div>
+                                    <span class="muted">Método de pago:</span><br>
+                                    <b>${esc(p.metodoPago || 'Sin seleccionar')}</b>
+                                    ${p.referenciaPago ? `<br><small class="muted">Ref: ${esc(p.referenciaPago)}</small>` : ''}
+                                </div>
+                                <div>
+                                    <span class="muted">Total del Pedido:</span><br>
+                                    <b style="font-size:1.2rem; color:#72a7ff">${money(p.total)}</b>
+                                </div>
+                            </div>
+
+                            <!-- ACCIONES DE PAGO PARA EL CLIENTE SI ESTÁ PENDIENTE O RECHAZADO -->
+                            ${(!isPaid && p.estado !== 'CANCELADO') ? `
+                                <div style="background:#0e1e33; border:1px solid #1f3b5e; border-radius:10px; padding:12px 16px; margin:14px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px">
+                                    <div>
+                                        <b style="color:${isRejected ? '#ff7588' : '#ffd074'}">
+                                            ${isRejected ? '⚠️ Pago Rechazado por Administración' : '⏳ Esperando confirmación de pago'}
+                                        </b>
+                                        <p class="muted" style="margin:2px 0 0; font-size:0.84rem">
+                                            ${isRejected ? 'Por favor reenvía un comprobante o método válido para proceder con tu entrega.' : 'El administrador revisará el pago para cambiar el estado a PROCESANDO.'}
+                                        </p>
+                                    </div>
+                                    <button class="btn btn-primary btn-sm" onclick="openPayModal(${p.id}, '${p.metodoPago || 'YAPE'}', '${esc(p.referenciaPago || '')}')">
+                                        💳 ${p.metodoPago ? 'Actualizar Pago' : 'Registrar Pago'}
+                                    </button>
+                                </div>
+                            ` : ''}
+
+                            <!-- PRODUCTOS COMPRADOS -->
+                            <details style="margin-top:12px; font-size:0.9rem">
+                                <summary style="cursor:pointer; font-weight:600; color:#8bb2ff">
+                                    Ver productos incluidos (${p.detalles.length})
+                                </summary>
+                                <div style="margin-top:10px; padding:10px; background:#071220; border-radius:8px">
+                                    ${p.detalles.map(d => `
+                                        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #14253a">
+                                            <span>${esc(d.productoNombre)} &times; <b>${d.cantidad}</b></span>
+                                            <span>${money(d.subtotal)}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </details>
+                        </article>
+                    `;
+                }).join('');
             } catch (e) {
-                container.innerHTML = '<div class="empty-state"><p>Error de conexion</p></div>';
+                container.innerHTML = `<div class="alert error">${esc(e.message)}</div>`;
             }
         }
 
-        function renderOrders(orders) {
-            const container = document.getElementById('orders-container');
+        function openPayModal(orderId, currentMethod, currentRef) {
+            document.getElementById('payOrderId').value = orderId;
+            document.getElementById('modalPayMethod').value = currentMethod || 'YAPE';
+            document.getElementById('modalPayRef').value = currentRef || '';
+            document.getElementById('payModalTitle').textContent = `Registrar Pago para Pedido #${orderId}`;
+            updatePayGuide();
+            document.getElementById('payModal').classList.add('show');
+        }
 
-            if (orders.length === 0) {
-                container.innerHTML = '<div class="empty-state"><p>No tienes pedidos aun</p><a href="index.html" class="btn btn-primary">Explorar productos</a></div>';
-                return;
+        function closePayModal() {
+            document.getElementById('payModal').classList.remove('show');
+        }
+
+        function updatePayGuide() {
+            const m = document.getElementById('modalPayMethod').value;
+            document.getElementById('modalPayGuide').innerHTML = guides[m] || '';
+            const refInput = document.getElementById('modalPayRef');
+            if (m === 'EFECTIVO') {
+                document.getElementById('modalRefLabel').innerHTML = 'Observaciones para la entrega (Opcional)';
+                refInput.required = false;
+            } else {
+                document.getElementById('modalRefLabel').innerHTML = 'Número de Operación / Código de Referencia <span class="req">*</span>';
+                refInput.required = true;
             }
+        }
 
-            let html = '<div class="orders-list">';
-            orders.forEach(order => {
-                const fecha = new Date(order.fechaPedido).toLocaleString('es-ES');
-                html += '<div class="order-card">';
-                html += '<div class="order-header">';
-                html += '<div><span class="order-id">Pedido #' + order.id + '</span> <span class="order-date">' + fecha + '</span></div>';
-                html += '<span class="status-badge status-' + order.estado + '">' + order.estado + '</span>';
-                html += '</div>';
-                html += '<div class="order-body">';
-                order.detalles.forEach(d => {
-                    html += '<div class="order-item-row">';
-                    html += '<span>' + d.productoNombre + ' x' + d.cantidad + '</span>';
-                    html += '<span>' + formatCurrency(d.subtotal) + '</span>';
-                    html += '</div>';
+        document.getElementById('payForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('payOrderId').value;
+            const metodoPago = document.getElementById('modalPayMethod').value;
+            const referencia = document.getElementById('modalPayRef').value.trim();
+
+            try {
+                await json(`/api/pagos/pedidos/${id}`, {
+                    method: 'POST',
+                    body: { metodoPago, referencia }
                 });
-                html += '</div>';
-                html += '<div class="order-footer">';
-                html += '<span class="order-total">Total: ' + formatCurrency(order.total) + '</span>';
-                html += '</div>';
-                html += '</div>';
-            });
-            html += '</div>';
-            container.innerHTML = html;
-        }
+                closePayModal();
+                alertBox('Pago registrado correctamente. El administrador lo verificará.', 'ok');
+                loadMyOrders();
+            } catch (err) {
+                alertBox(err.message, 'error');
+            }
+        };
 
-        loadOrders();
+        loadMyOrders();
     </script>
 </body>
 </html>
