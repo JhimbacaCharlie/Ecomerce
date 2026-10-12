@@ -39,14 +39,16 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/css/**", "/js/**").permitAll()
-                        .requestMatchers("/", "/index.html", "/login.html", "/registro.html",
+                        .requestMatchers("/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
+                        .requestMatchers("/", "/*.html", "/index.html", "/login.html", "/registro.html",
                                 "/detalle-producto.html", "/carrito.html", "/pedidos.html",
-                                "/admin.html").permitAll()
+                                "/admin.html", "/perfil.html").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/productos/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/productos", "/api/productos/**").permitAll()
                         .anyRequest().authenticated()
                 )
+                .exceptionHandling(e -> e.authenticationEntryPoint(
+                        (req, res, ex) -> res.sendError(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED)))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
