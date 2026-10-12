@@ -1,392 +1,806 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Administracion - TechStore</title>
-    <link rel="stylesheet" href="/css/estilos.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Panel de Administración | TechStore</title>
+    <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
-    <nav class="navbar">
-        <div class="navbar-inner">
-            <a href="index.html" class="navbar-logo">Tech<span>Store</span></a>
-            <ul class="navbar-links" id="nav-links"></ul>
-        </div>
-    </nav>
+    <header class="topbar">
+        <nav class="nav">
+            <a class="brand" href="/index.html">Tech<span>Store</span></a>
+            <div id="navlinks" class="navlinks"></div>
+        </nav>
+    </header>
 
-    <div class="container">
-        <div id="alert-container"></div>
-        <div class="page-header">
-            <h1>Panel de Administracion</h1>
+    <main class="container">
+        <div id="alerts"></div>
+
+        <section class="hero">
+            <div class="hero-card">
+                <span class="badge">PANEL ADMINISTRATIVO</span>
+                <h1>Centro de Control</h1>
+                <p>Gestión integral de catálogo, validación y confirmación de pagos, seguimiento de entregas, usuarios registrados y reportes financieros.</p>
+            </div>
+            <div id="quickStats" class="stats"></div>
+        </section>
+
+        <!-- NAVEGACIÓN POR PESTAÑAS -->
+        <div class="tabs">
+            <button class="tab active" data-tab="pedidosTab">📦 Pedidos y Despacho</button>
+            <button class="tab" data-tab="ventasTab">📊 Módulo de Ventas y Reportes</button>
+            <button class="tab" data-tab="productosTab">💻 Catálogo de Productos</button>
+            <button class="tab" data-tab="usuariosTab">👥 Usuarios Registrados</button>
         </div>
 
-        <div class="admin-tabs">
-            <button class="admin-tab active" onclick="showPanel('productos')">Productos</button>
-            <button class="admin-tab" onclick="showPanel('pedidos')">Pedidos</button>
-        </div>
+        <!-- ===================================================================
+             PESTAÑA 1: PEDIDOS (Aceptar pago, rechazar pago, confirmar entrega)
+             =================================================================== -->
+        <section id="pedidosTab" class="panel tabpanel">
+            <div class="order-head">
+                <div>
+                    <h2>Gestión de Pedidos</h2>
+                    <p class="muted" style="margin:4px 0 0; font-size:0.88rem">
+                        Confirma los pagos registrados por los clientes y valida las entregas completadas.
+                    </p>
+                </div>
+                <div class="toolbar" style="margin:0">
+                    <input id="orderSearch" class="input" style="max-width:260px" placeholder="Buscar pedido o cliente..." oninput="filterOrders()">
+                    <select id="orderStatusFilter" class="select" style="max-width:200px" onchange="filterOrders()">
+                        <option value="">Todos los estados</option>
+                        <option value="PENDIENTE">Pago Pendiente</option>
+                        <option value="CONFIRMADO">Pago Confirmado</option>
+                        <option value="ENTREGADO">Entregado</option>
+                    </select>
+                    <button class="btn btn-outline" onclick="loadOrders()">Actualizar</button>
+                </div>
+            </div>
 
-        <!-- PANEL PRODUCTOS -->
-        <div id="panel-productos" class="admin-panel active">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem">
-                <h2 style="font-size:1.2rem">Gestion de Productos</h2>
+            <div class="table-wrap" style="margin-top:16px">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th class="col-id">N°</th>
+                            <th class="text-left col-user">Cliente</th>
+                            <th class="text-left col-date">Fecha</th>
+                            <th class="text-right">Total</th>
+                            <th class="text-center">Método & Ref.</th>
+                            <th class="text-center">Estado Pago</th>
+                            <th class="text-center">Estado Entrega</th>
+                            <th class="text-center col-actions">Acciones (Admin)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orderRows"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ===================================================================
+             PESTAÑA 2: VENTAS Y REPORTES (Ingresos, salidas, márgenes, exportar)
+             =================================================================== -->
+        <section id="ventasTab" class="panel tabpanel" style="display:none">
+            <div class="order-head">
+                <div>
+                    <h2>Módulo de Ventas y Balance Financiero</h2>
+                    <p class="muted" style="margin:4px 0 0; font-size:0.88rem">
+                        Visualiza los ingresos, costos de mercadería (salidas), utilidades netas y exporta en múltiples formatos.
+                    </p>
+                </div>
+                <div class="toolbar" style="margin:0">
+                    <button class="btn btn-ok" onclick="downloadXls()">📗 Exportar Excel (.xls)</button>
+                    <button class="btn btn-primary" onclick="downloadCsv()">📄 Exportar CSV</button>
+                    <button class="btn btn-outline" onclick="downloadJson()">📋 Exportar JSON</button>
+                    <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimir / PDF</button>
+                </div>
+            </div>
+
+            <!-- TARJETAS DE INGRESOS Y SALIDAS -->
+            <div id="salesMetrics" class="stats" style="margin: 20px 0;"></div>
+
+            <!-- TABLA HISTORIAL DE VENTAS CON TODOS LOS DATOS -->
+            <div class="order-head" style="margin-top:24px">
+                <h3>Historial Completo de Ventas</h3>
+                <input id="salesSearch" class="input" style="max-width:280px" placeholder="Filtrar ventas por cliente, ID..." oninput="filterSales()">
+            </div>
+
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th class="col-id">ID Venta</th>
+                            <th class="text-left col-date">Fecha y Hora</th>
+                            <th class="text-left col-user">Cliente y Contacto</th>
+                            <th class="text-left">Productos Vendidos</th>
+                            <th class="text-right">Costo (Salidas)</th>
+                            <th class="text-right">Total Venta</th>
+                            <th class="text-right">Utilidad Neta</th>
+                            <th class="text-center">Método & Ref.</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-center">Comprobante</th>
+                        </tr>
+                    </thead>
+                    <tbody id="salesRows"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ===================================================================
+             PESTAÑA 3: CATÁLOGO DE PRODUCTOS
+             =================================================================== -->
+        <section id="productosTab" class="panel tabpanel" style="display:none">
+            <div class="order-head">
+                <div>
+                    <h2>Catálogo de Productos</h2>
+                    <p class="muted" style="margin:4px 0 0; font-size:0.88rem">Control de precios, costos unitarios de mercadería y stock de inventario.</p>
+                </div>
                 <button class="btn btn-primary" onclick="openProductModal()">+ Nuevo Producto</button>
             </div>
-            <div class="table-responsive" id="products-table-container">
-                <div class="loading"><div class="spinner"></div><br>Cargando...</div>
-            </div>
-        </div>
 
-        <!-- PANEL PEDIDOS -->
-        <div id="panel-pedidos" class="admin-panel">
-            <h2 style="font-size:1.2rem;margin-bottom:1rem">Gestion de Pedidos</h2>
-            <div id="orders-table-container">
-                <div class="loading"><div class="spinner"></div><br>Cargando...</div>
+            <div class="table-wrap" style="margin-top:16px">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th class="col-id">ID</th>
+                            <th class="text-left">Producto</th>
+                            <th class="text-left">Categoría</th>
+                            <th class="text-right">Precio Venta</th>
+                            <th class="text-right">Costo Unitario</th>
+                            <th class="text-right">Margen Est.</th>
+                            <th class="text-right">Stock</th>
+                            <th class="text-center col-actions">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productRows"></tbody>
+                </table>
             </div>
-        </div>
-    </div>
+        </section>
+
+        <!-- ===================================================================
+             PESTAÑA 4: USUARIOS REGISTRADOS
+             =================================================================== -->
+        <section id="usuariosTab" class="panel tabpanel" style="display:none">
+            <div class="order-head">
+                <div>
+                    <h2>Usuarios Registrados</h2>
+                    <p class="muted" style="margin:4px 0 0; font-size:0.88rem">Visualiza los datos personales, de contacto y rol de todos los usuarios del sistema.</p>
+                </div>
+                <div class="toolbar" style="margin:0">
+                    <input id="userSearch" class="input" style="max-width:280px" placeholder="Buscar por nombre, email, teléfono..." oninput="filterUsers()">
+                    <select id="userRoleFilter" class="select" style="max-width:180px" onchange="filterUsers()">
+                        <option value="">Todos los roles</option>
+                        <option value="CLIENTE">Clientes</option>
+                        <option value="ADMIN">Administradores</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="userStats" class="stats" style="margin: 18px 0;"></div>
+
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th class="col-id">ID</th>
+                            <th class="text-left">Nombre Completo</th>
+                            <th class="text-left">Correo Electrónico</th>
+                            <th class="text-center">Rol</th>
+                            <th class="text-left">Teléfono</th>
+                            <th class="text-left">Dirección</th>
+                            <th class="text-left col-date">Fecha Registro</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userRows"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
 
     <!-- MODAL PRODUCTO -->
-    <div class="modal-overlay hidden" id="product-modal">
-        <div class="modal">
-            <div class="modal-header">
-                <h2 id="modal-title">Nuevo Producto</h2>
-                <button class="modal-close" onclick="closeProductModal()">&times;</button>
+    <div id="productModal" class="modal">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h2 id="modalTitle">Nuevo Producto</h2>
+                <button class="close" onclick="closeProductModal()">&times;</button>
             </div>
-            <div class="modal-body">
-                <form id="product-form">
-                    <input type="hidden" id="prod-id">
-                    <div class="form-group">
-                        <label for="prod-nombre">Nombre</label>
-                        <input type="text" id="prod-nombre" class="form-control" required>
+            <form id="productForm">
+                <input id="prodId" type="hidden">
+                <div class="form-row">
+                    <div class="field">
+                        <label>Nombre del Producto <span class="req">*</span></label>
+                        <input id="prodNombre" class="form-control" required placeholder="Ej: Smartphone Pro">
                     </div>
-                    <div class="form-group">
-                        <label for="prod-descripcion">Descripcion</label>
-                        <textarea id="prod-descripcion" class="form-control" rows="3"></textarea>
+                    <div class="field">
+                        <label>Categoría <span class="req">*</span></label>
+                        <select id="prodCategoria" class="select" required></select>
                     </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
-                        <div class="form-group">
-                            <label for="prod-precio">Precio</label>
-                            <input type="number" id="prod-precio" class="form-control" step="0.01" min="0.01" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="prod-stock">Stock</label>
-                            <input type="number" id="prod-stock" class="form-control" min="0" required>
-                        </div>
+                </div>
+                <div class="field">
+                    <label>Descripción</label>
+                    <textarea id="prodDescripcion" class="form-control" rows="3" placeholder="Especificaciones, características..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="field">
+                        <label>Precio de Venta (S/.) <span class="req">*</span></label>
+                        <input id="prodPrecio" type="number" step="0.01" min="0.01" class="form-control" required placeholder="0.00">
                     </div>
-                    <div class="form-group">
-                        <label for="prod-imagen">URL de Imagen</label>
-                        <input type="text" id="prod-imagen" class="form-control" placeholder="https://...">
+                    <div class="field">
+                        <label>Costo Unitario (S/.) <span class="req">*</span></label>
+                        <input id="prodCosto" type="number" step="0.01" min="0" class="form-control" required placeholder="0.00">
                     </div>
-                    <div class="form-group">
-                        <label for="prod-categoria">Categoria</label>
-                        <select id="prod-categoria" class="form-control">
-                            <option value="">Sin categoria</option>
-                        </select>
+                    <div class="field">
+                        <label>Stock Disponible <span class="req">*</span></label>
+                        <input id="prodStock" type="number" min="0" class="form-control" required placeholder="0">
                     </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeProductModal()">Cancelar</button>
-                <button class="btn btn-primary" id="btn-save-product" onclick="saveProduct()">Guardar</button>
-            </div>
+                </div>
+                <div class="field">
+                    <label>URL de Imagen</label>
+                    <input id="prodImagen" class="form-control" placeholder="https://...">
+                </div>
+                <div class="toolbar" style="justify-content: flex-end; margin-top:20px">
+                    <button type="button" class="btn btn-outline" onclick="closeProductModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Producto</button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <!-- MODAL DETALLE PEDIDO -->
-    <div class="modal-overlay hidden" id="order-detail-modal">
-        <div class="modal">
-            <div class="modal-header">
-                <h2>Detalle del Pedido</h2>
-                <button class="modal-close" onclick="closeOrderDetailModal()">&times;</button>
+    <!-- MODAL DETALLE DE PEDIDO / COMPROBANTE -->
+    <div id="detailModal" class="modal">
+        <div class="modal-card">
+            <div class="modal-head">
+                <h2 id="detailTitle">Detalle del Pedido</h2>
+                <button class="close" onclick="closeDetailModal()">&times;</button>
             </div>
-            <div class="modal-body" id="order-detail-body"></div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeOrderDetailModal()">Cerrar</button>
+            <div id="detailContent"></div>
+            <div class="toolbar" style="justify-content:flex-end; margin-top:20px">
+                <button class="btn btn-outline" onclick="closeDetailModal()">Cerrar</button>
+                <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir Comprobante</button>
             </div>
         </div>
     </div>
 
     <script src="/js/utils.js"></script>
     <script>
-        if (!isAdmin()) {
-            window.location.href = 'index.html';
-        }
+        nav('admin');
+        if (!requireAdmin()) throw 0;
 
-        let categorias = [];
+        let allOrders = [];
+        let allSales = [];
+        let allProducts = [];
+        let allUsers = [];
 
-        function showPanel(name) {
-            document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
-            document.getElementById('panel-' + name).classList.add('active');
-            event.target.classList.add('active');
-        }
+        // GESTIÓN DE PESTAÑAS
+        document.querySelectorAll('.tab').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tabpanel').forEach(p => p.style.display = 'none');
+                btn.classList.add('active');
+                const target = document.getElementById(btn.dataset.tab);
+                if (target) target.style.display = 'block';
 
-        /* ========================================
-           CATEGORIAS
-           ======================================== */
-        async function loadCategorias() {
-            try {
-                const res = await fetch('/api/productos/categorias');
-                if (res.ok) {
-                    categorias = await res.json();
-                    const select = document.getElementById('prod-categoria');
-                    select.innerHTML = '<option value="">Sin categoria</option>';
-                    categorias.forEach(c => {
-                        const opt = document.createElement('option');
-                        opt.value = c.id;
-                        opt.textContent = c.nombre;
-                        select.appendChild(opt);
-                    });
-                }
-            } catch (e) {}
-        }
-
-        /* ========================================
-           PRODUCTOS ADMIN
-           ======================================== */
-        async function loadAdminProducts() {
-            const container = document.getElementById('products-table-container');
-            try {
-                const res = await fetchWithAuth('/api/productos');
-                if (res.ok) {
-                    const products = await res.json();
-                    renderAdminProducts(products);
-                } else {
-                    container.innerHTML = '<div class="empty-state"><p>Error al cargar</p></div>';
-                }
-            } catch (e) {
-                container.innerHTML = '<div class="empty-state"><p>Error de conexion</p></div>';
-            }
-        }
-
-        function renderAdminProducts(products) {
-            const container = document.getElementById('products-table-container');
-            if (products.length === 0) {
-                container.innerHTML = '<div class="empty-state"><p>No hay productos</p></div>';
-                return;
-            }
-
-            let html = '<table class="admin-table">';
-            html += '<thead><tr><th>Imagen</th><th>Nombre</th><th>Categoria</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead>';
-            html += '<tbody>';
-            products.forEach(p => {
-                html += '<tr>';
-                html += '<td><img src="' + (p.imagenUrl || 'https://via.placeholder.com/50x50?text=N/A') + '" style="width:50px;height:50px;object-fit:cover;border-radius:4px" onerror="this.src=\'https://via.placeholder.com/50x50?text=N/A\'"></td>';
-                html += '<td>' + p.nombre + '</td>';
-                html += '<td>' + (p.categoriaNombre || '-') + '</td>';
-                html += '<td>' + formatCurrency(p.precio) + '</td>';
-                html += '<td>' + p.stock + '</td>';
-                html += '<td class="actions">';
-                html += '<button class="btn btn-primary btn-sm" onclick="editProduct(' + p.id + ')">Editar</button>';
-                html += '<button class="btn btn-danger btn-sm" onclick="deleteProduct(' + p.id + ')">Eliminar</button>';
-                html += '</td></tr>';
-            });
-            html += '</tbody></table>';
-            container.innerHTML = html;
-        }
-
-        function openProductModal(product) {
-            document.getElementById('product-modal').classList.remove('hidden');
-            if (product) {
-                document.getElementById('modal-title').textContent = 'Editar Producto';
-                document.getElementById('prod-id').value = product.id;
-                document.getElementById('prod-nombre').value = product.nombre;
-                document.getElementById('prod-descripcion').value = product.descripcion || '';
-                document.getElementById('prod-precio').value = product.precio;
-                document.getElementById('prod-stock').value = product.stock;
-                document.getElementById('prod-imagen').value = product.imagenUrl || '';
-                document.getElementById('prod-categoria').value = product.categoriaId || '';
-            } else {
-                document.getElementById('modal-title').textContent = 'Nuevo Producto';
-                document.getElementById('product-form').reset();
-                document.getElementById('prod-id').value = '';
-            }
-        }
-
-        function closeProductModal() {
-            document.getElementById('product-modal').classList.add('hidden');
-        }
-
-        async function editProduct(id) {
-            try {
-                const res = await fetchWithAuth('/api/productos/' + id);
-                if (res.ok) {
-                    const product = await res.json();
-                    openProductModal(product);
-                }
-            } catch (e) {
-                mostrarAlerta('Error de conexion', 'danger');
-            }
-        }
-
-        async function saveProduct() {
-            const btn = document.getElementById('btn-save-product');
-            btn.disabled = true;
-            btn.textContent = 'Guardando...';
-
-            const id = document.getElementById('prod-id').value;
-            const body = {
-                nombre: document.getElementById('prod-nombre').value,
-                descripcion: document.getElementById('prod-descripcion').value,
-                precio: parseFloat(document.getElementById('prod-precio').value),
-                stock: parseInt(document.getElementById('prod-stock').value),
-                imagenUrl: document.getElementById('prod-imagen').value,
-                categoriaId: document.getElementById('prod-categoria').value ? parseInt(document.getElementById('prod-categoria').value) : null
+                if (btn.dataset.tab === 'pedidosTab') loadOrders();
+                if (btn.dataset.tab === 'ventasTab') loadSalesModule();
+                if (btn.dataset.tab === 'productosTab') loadProducts();
+                if (btn.dataset.tab === 'usuariosTab') loadUsers();
             };
+        });
 
+        // 1. CARGA DE RESUMEN SUPERIOR
+        async function loadQuickStats() {
             try {
-                let res;
-                if (id) {
-                    res = await fetchWithAuth('/api/productos/' + id, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(body)
-                    });
-                } else {
-                    res = await fetchWithAuth('/api/productos', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(body)
-                    });
-                }
-
-                if (res.ok) {
-                    mostrarAlerta('Producto guardado correctamente', 'success');
-                    closeProductModal();
-                    loadAdminProducts();
-                } else {
-                    const data = await res.json();
-                    let msg = data.mensaje || 'Error al guardar';
-                    if (data.errores) msg = Object.values(data.errores).join(', ');
-                    mostrarAlerta(msg, 'danger');
-                }
+                const r = await json('/api/admin/reportes/resumen');
+                document.getElementById('quickStats').innerHTML = `
+                    <div class="stat"><small>Pedidos Totales</small><strong>${r.pedidosTotales}</strong></div>
+                    <div class="stat highlight"><small>Pedidos Pagados</small><strong>${r.pedidosPagados}</strong></div>
+                    <div class="stat"><small>Ingresos Totales</small><strong>${money(r.ingresos)}</strong></div>
+                    <div class="stat profit"><small>Utilidad Neta Est.</small><strong>${money(r.utilidadEstimada)}</strong></div>
+                `;
             } catch (e) {
-                mostrarAlerta('Error de conexion', 'danger');
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Guardar';
+                console.error(e);
             }
         }
 
-        async function deleteProduct(id) {
-            if (!confirm('Seguro que deseas eliminar este producto?')) return;
+        // 2. MÓDULO DE PEDIDOS (Aceptar pago, rechazar pago, confirmar entrega)
+        async function loadOrders() {
+            const tbody = document.getElementById('orderRows');
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding:30px">Cargando pedidos...</td></tr>';
             try {
-                const res = await fetchWithAuth('/api/productos/' + id, { method: 'DELETE' });
-                if (res.ok) {
-                    mostrarAlerta('Producto eliminado', 'success');
-                    loadAdminProducts();
-                } else {
-                    mostrarAlerta('Error al eliminar', 'danger');
-                }
+                allOrders = await json('/api/pedidos/todos');
+                renderOrders(allOrders);
+                loadQuickStats();
             } catch (e) {
-                mostrarAlerta('Error de conexion', 'danger');
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center alert error">${esc(e.message)}</td></tr>`;
             }
         }
 
-        /* ========================================
-           PEDIDOS ADMIN
-           ======================================== */
-        async function loadAdminOrders() {
-            const container = document.getElementById('orders-table-container');
-            try {
-                const res = await fetchWithAuth('/api/pedidos/todos');
-                if (res.ok) {
-                    const orders = await res.json();
-                    renderAdminOrders(orders);
-                } else {
-                    container.innerHTML = '<div class="empty-state"><p>Error al cargar</p></div>';
-                }
-            } catch (e) {
-                container.innerHTML = '<div class="empty-state"><p>Error de conexion</p></div>';
-            }
-        }
-
-        function renderAdminOrders(orders) {
-            const container = document.getElementById('orders-table-container');
-            if (orders.length === 0) {
-                container.innerHTML = '<div class="empty-state"><p>No hay pedidos</p></div>';
+        function renderOrders(list) {
+            const tbody = document.getElementById('orderRows');
+            if (!list.length) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center muted" style="padding:30px">No se encontraron pedidos.</td></tr>';
                 return;
             }
 
-            let html = '<table class="admin-table">';
-            html += '<thead><tr><th>ID</th><th>Cliente</th><th>Fecha</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead>';
-            html += '<tbody>';
-            orders.forEach(o => {
-                const fecha = new Date(o.fechaPedido).toLocaleString('es-ES');
-                html += '<tr>';
-                html += '<td>#' + o.id + '</td>';
-                html += '<td>' + o.nombreUsuario + '</td>';
-                html += '<td>' + fecha + '</td>';
-                html += '<td>' + formatCurrency(o.total) + '</td>';
-                html += '<td><span class="status-badge status-' + o.estado + '">' + o.estado + '</span></td>';
-                html += '<td class="actions">';
-                html += '<button class="btn btn-primary btn-sm" onclick="viewOrderDetail(' + o.id + ')">Ver</button>';
-                html += '<select onchange="changeOrderStatus(' + o.id + ', this.value)" style="padding:0.35rem;font-size:0.8rem;border-radius:var(--radius);border:1px solid var(--gray-200)">';
-                ['PENDIENTE','PROCESANDO','ENVIADO','ENTREGADO','CANCELADO'].forEach(est => {
-                    html += '<option value="' + est + '"' + (o.estado === est ? ' selected' : '') + '>' + est + '</option>';
-                });
-                html += '</select>';
-                html += '</td></tr>';
+            tbody.innerHTML = list.map(p => {
+                const pagoOk = p.estadoPago === 'CONFIRMADO';
+                const entregado = p.estado === 'ENTREGADO';
+                const cancelado = p.estado === 'CANCELADO';
+
+                // Acciones exclusivas de ADMIN
+                let actionButtons = '';
+                if (!pagoOk && !cancelado) {
+                    actionButtons += `<button class="btn btn-ok btn-sm" title="Aceptar y confirmar pago" onclick="acceptPayment(${p.id})">✓ Aceptar Pago</button>`;
+                    actionButtons += `<button class="btn btn-danger btn-sm" title="Rechazar pago" onclick="rejectPayment(${p.id})">✗ Rechazar</button>`;
+                }
+                if (pagoOk && !entregado && !cancelado) {
+                    actionButtons += `<button class="btn btn-primary btn-sm" title="Confirmar entrega al cliente" onclick="confirmDelivery(${p.id})">🚚 Confirmar Entrega</button>`;
+                }
+                actionButtons += `<button class="btn btn-outline btn-sm" onclick="viewOrderDetail(${p.id})">👁️ Detalle</button>`;
+
+                return `
+                    <tr>
+                        <td class="col-id">#${p.id}</td>
+                        <td class="col-user">
+                            <b>${esc(p.nombreUsuario)}</b><br>
+                            <small class="muted">${esc(p.emailUsuario)}</small><br>
+                            <small class="muted">📞 ${esc(p.telefonoContacto || '-')}</small>
+                        </td>
+                        <td class="col-date">${new Date(p.fechaPedido).toLocaleString('es-PE')}</td>
+                        <td class="col-money">${money(p.total)}</td>
+                        <td class="text-center">
+                            <span class="badge" style="font-size:0.75rem">${esc(p.metodoPago || 'PENDIENTE')}</span>
+                            ${p.referenciaPago ? `<br><small class="muted" style="font-weight:600">Ref: ${esc(p.referenciaPago)}</small>` : ''}
+                        </td>
+                        <td class="col-badge">
+                            <span class="status ${statusClass(p.estadoPago)}">${p.estadoPago}</span>
+                        </td>
+                        <td class="col-badge">
+                            <span class="status ${statusClass(p.estado)}">${p.estado}</span>
+                        </td>
+                        <td class="col-actions">
+                            <div class="actions">${actionButtons}</div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterOrders() {
+            const q = (document.getElementById('orderSearch').value || '').trim().toLowerCase();
+            const status = document.getElementById('orderStatusFilter').value;
+
+            const filtered = allOrders.filter(p => {
+                const matchQ = !q ||
+                    String(p.id).includes(q) ||
+                    (p.nombreUsuario && p.nombreUsuario.toLowerCase().includes(q)) ||
+                    (p.emailUsuario && p.emailUsuario.toLowerCase().includes(q)) ||
+                    (p.telefonoContacto && p.telefonoContacto.includes(q));
+                
+                let matchStatus = true;
+                if (status === 'PENDIENTE') matchStatus = p.estadoPago === 'PENDIENTE';
+                else if (status === 'CONFIRMADO') matchStatus = p.estadoPago === 'CONFIRMADO';
+                else if (status === 'ENTREGADO') matchStatus = p.estado === 'ENTREGADO';
+
+                return matchQ && matchStatus;
             });
-            html += '</tbody></table>';
-            container.innerHTML = html;
+            renderOrders(filtered);
+        }
+
+        async function acceptPayment(id) {
+            if (!confirm(`¿Confirmar y aceptar el pago para el Pedido #${id}? Esto descontará automáticamente el stock del inventario.`)) return;
+            try {
+                await json(`/api/pagos/pedidos/${id}/confirmar`, { method: 'PUT' });
+                alertBox(`Pago del Pedido #${id} confirmado con éxito.`, 'ok');
+                loadOrders();
+            } catch (e) {
+                alertBox(e.message, 'error');
+            }
+        }
+
+        async function rejectPayment(id) {
+            const razon = prompt('¿Desea rechazar este pago? Ingrese el motivo (opcional):');
+            if (razon === null) return;
+            try {
+                await json(`/api/pagos/pedidos/${id}/rechazar`, { method: 'PUT' });
+                alertBox(`Pago del Pedido #${id} marcado como RECHAZADO.`, 'warn');
+                loadOrders();
+            } catch (e) {
+                alertBox(e.message, 'error');
+            }
+        }
+
+        async function confirmDelivery(id) {
+            if (!confirm(`¿Confirmar que el Pedido #${id} fue entregado satisfactoriamente al cliente?`)) return;
+            try {
+                await json(`/api/pagos/pedidos/${id}/entrega`, { method: 'PUT' });
+                alertBox(`Pedido #${id} marcado como ENTREGADO.`, 'ok');
+                loadOrders();
+            } catch (e) {
+                alertBox(e.message, 'error');
+            }
         }
 
         async function viewOrderDetail(id) {
             try {
-                const res = await fetchWithAuth('/api/pedidos/' + id);
-                if (res.ok) {
-                    const order = await res.json();
-                    const fecha = new Date(order.fechaPedido).toLocaleString('es-ES');
-                    let html = '<p><strong>Pedido #' + order.id + '</strong></p>';
-                    html += '<p>Cliente: ' + order.nombreUsuario + '</p>';
-                    html += '<p>Fecha: ' + fecha + '</p>';
-                    html += '<p>Estado: <span class="status-badge status-' + order.estado + '">' + order.estado + '</span></p>';
-                    html += '<hr style="margin:1rem 0">';
-                    order.detalles.forEach(d => {
-                        html += '<div style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid var(--gray-100);font-size:0.9rem">';
-                        html += '<span>' + d.productoNombre + ' x' + d.cantidad + '</span>';
-                        html += '<span>' + formatCurrency(d.subtotal) + '</span></div>';
-                    });
-                    html += '<div style="display:flex;justify-content:space-between;padding:0.75rem 0;font-size:1.1rem;font-weight:800"><span>Total</span><span>' + formatCurrency(order.total) + '</span></div>';
-                    document.getElementById('order-detail-body').innerHTML = html;
-                    document.getElementById('order-detail-modal').classList.remove('hidden');
-                }
+                const p = await json(`/api/pedidos/${id}`);
+                const modal = document.getElementById('detailModal');
+                document.getElementById('detailTitle').textContent = `Comprobante de Pedido #${p.id}`;
+
+                let prodsHtml = p.detalles.map(d => `
+                    <tr>
+                        <td>${esc(d.productoNombre)}</td>
+                        <td class="text-right">${money(d.precioUnitario)}</td>
+                        <td class="text-center">${d.cantidad}</td>
+                        <td class="text-right"><b>${money(d.subtotal)}</b></td>
+                    </tr>
+                `).join('');
+
+                document.getElementById('detailContent').innerHTML = `
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:20px; font-size:0.9rem">
+                        <div>
+                            <p><b>Cliente:</b> ${esc(p.nombreUsuario)}</p>
+                            <p><b>Correo:</b> ${esc(p.emailUsuario)}</p>
+                            <p><b>Teléfono:</b> ${esc(p.telefonoContacto || '-')}</p>
+                            <p><b>Dirección de entrega:</b> ${esc(p.direccionEnvio || '-')}</p>
+                        </div>
+                        <div>
+                            <p><b>Fecha de pedido:</b> ${new Date(p.fechaPedido).toLocaleString('es-PE')}</p>
+                            <p><b>Método de Pago:</b> <span class="badge">${esc(p.metodoPago || 'PENDIENTE')}</span></p>
+                            <p><b>Referencia / Op:</b> ${esc(p.referenciaPago || 'Sin referencia registrada')}</p>
+                            <p><b>Estado Pago:</b> <span class="status ${statusClass(p.estadoPago)}">${p.estadoPago}</span></p>
+                            <p><b>Estado Entrega:</b> <span class="status ${statusClass(p.estado)}">${p.estado}</span></p>
+                        </div>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="table" style="min-width:auto">
+                            <thead>
+                                <tr>
+                                    <th class="text-left">Producto</th>
+                                    <th class="text-right">Precio Unitario</th>
+                                    <th class="text-center">Cant.</th>
+                                    <th class="text-right">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>${prodsHtml}</tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="3" class="text-right" style="padding-top:14px">TOTAL GENERAL:</th>
+                                    <th class="text-right" style="padding-top:14px; font-size:1.15rem; color:#72a7ff">${money(p.total)}</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                `;
+                modal.classList.add('show');
             } catch (e) {
-                mostrarAlerta('Error de conexion', 'danger');
+                alertBox(e.message, 'error');
             }
         }
 
-        function closeOrderDetailModal() {
-            document.getElementById('order-detail-modal').classList.add('hidden');
+        function closeDetailModal() {
+            document.getElementById('detailModal').classList.remove('show');
         }
 
-        async function changeOrderStatus(id, estado) {
+        // 3. MÓDULO DE VENTAS, INGRESOS, SALIDAS Y REPORTES
+        async function loadSalesModule() {
+            const metricsDiv = document.getElementById('salesMetrics');
+            const tbody = document.getElementById('salesRows');
+            metricsDiv.innerHTML = '<div class="empty">Calculando métricas...</div>';
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center" style="padding:30px">Cargando historial de ventas...</td></tr>';
+
             try {
-                const res = await fetchWithAuth('/api/pedidos/' + id + '/estado', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ estado: estado })
-                });
-                if (res.ok) {
-                    mostrarAlerta('Estado actualizado a ' + estado, 'success');
-                    loadAdminOrders();
-                } else {
-                    const data = await res.json();
-                    mostrarAlerta(data.mensaje || 'Error al actualizar', 'danger');
-                    loadAdminOrders();
-                }
+                const [resumen, ventas] = await Promise.all([
+                    json('/api/admin/reportes/resumen'),
+                    json('/api/admin/reportes/ventas')
+                ]);
+
+                allSales = ventas;
+
+                metricsDiv.innerHTML = `
+                    <div class="stat highlight">
+                        <small>Ingresos Totales (Pagados)</small>
+                        <strong>${money(resumen.ingresos)}</strong>
+                    </div>
+                    <div class="stat">
+                        <small>Costo Mercadería (Salidas)</small>
+                        <strong style="color:#f87171">${money(resumen.costoMercaderia)}</strong>
+                    </div>
+                    <div class="stat profit">
+                        <small>Utilidad Neta Estimada</small>
+                        <strong>${money(resumen.utilidadEstimada)}</strong>
+                    </div>
+                    <div class="stat">
+                        <small>Unidades Salidas (Vendidas)</small>
+                        <strong>${resumen.unidadesSalidas} uds.</strong>
+                    </div>
+                    <div class="stat">
+                        <small>Ticket Promedio</small>
+                        <strong>${money(resumen.ticketPromedio)}</strong>
+                    </div>
+                `;
+
+                renderSales(allSales);
             } catch (e) {
-                mostrarAlerta('Error de conexion', 'danger');
+                tbody.innerHTML = `<tr><td colspan="10" class="text-center alert error">${esc(e.message)}</td></tr>`;
             }
         }
 
-        /* ========================================
-           INIT
-           ======================================== */
-        loadCategorias();
-        loadAdminProducts();
-        loadAdminOrders();
+        function renderSales(list) {
+            const tbody = document.getElementById('salesRows');
+            if (!list.length) {
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center muted" style="padding:30px">No hay registros de ventas.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = list.map(v => `
+                <tr>
+                    <td class="col-id">#${v.id}</td>
+                    <td class="col-date">${v.fecha ? new Date(v.fecha).toLocaleString('es-PE') : '-'}</td>
+                    <td class="col-user">
+                        <b>${esc(v.clienteNombre)}</b><br>
+                        <small class="muted">${esc(v.clienteEmail)}</small><br>
+                        <small class="muted">📞 ${esc(v.clienteTelefono || '-')}</small>
+                    </td>
+                    <td style="max-width:280px; font-size:0.85rem">
+                        ${esc(v.productosResumen || '-')}
+                        <br><small class="muted">${v.cantidadTotal} artículo(s)</small>
+                    </td>
+                    <td class="col-money" style="color:#f87171">${money(v.costoTotal)}</td>
+                    <td class="col-money">${money(v.totalVenta)}</td>
+                    <td class="col-money col-profit">${money(v.utilidad)}</td>
+                    <td class="text-center">
+                        <span class="badge" style="font-size:0.75rem">${esc(v.metodoPago || '-')}</span>
+                        ${v.referenciaPago && v.referenciaPago !== '-' ? `<br><small class="muted">Ref: ${esc(v.referenciaPago)}</small>` : ''}
+                    </td>
+                    <td class="col-badge">
+                        <span class="status ${statusClass(v.estadoPago)}">${v.estadoPago}</span>
+                    </td>
+                    <td class="text-center">
+                        <button class="btn btn-outline btn-sm" onclick="viewOrderDetail(${v.id})">Ver Comprobante</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterSales() {
+            const q = (document.getElementById('salesSearch').value || '').trim().toLowerCase();
+            const filtered = allSales.filter(v => {
+                return !q ||
+                    String(v.id).includes(q) ||
+                    (v.clienteNombre && v.clienteNombre.toLowerCase().includes(q)) ||
+                    (v.clienteEmail && v.clienteEmail.toLowerCase().includes(q)) ||
+                    (v.productosResumen && v.productosResumen.toLowerCase().includes(q));
+            });
+            renderSales(filtered);
+        }
+
+        // DESCARGAS DE REPORTES
+        async function downloadCsv() {
+            try {
+                const r = await api('/api/admin/reportes/ventas.csv');
+                const b = await r.blob();
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(b);
+                a.download = 'reporte_ventas_techstore.csv';
+                a.click();
+                URL.revokeObjectURL(a.href);
+            } catch (e) { alertBox(e.message, 'error'); }
+        }
+
+        async function downloadXls() {
+            try {
+                const r = await api('/api/admin/reportes/ventas.xls');
+                const b = await r.blob();
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(b);
+                a.download = 'reporte_ventas_techstore.xls';
+                a.click();
+                URL.revokeObjectURL(a.href);
+            } catch (e) { alertBox(e.message, 'error'); }
+        }
+
+        async function downloadJson() {
+            try {
+                const r = await api('/api/admin/reportes/ventas.json');
+                const b = await r.blob();
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(b);
+                a.download = 'reporte_ventas_techstore.json';
+                a.click();
+                URL.revokeObjectURL(a.href);
+            } catch (e) { alertBox(e.message, 'error'); }
+        }
+
+        // 4. MÓDULO DE PRODUCTOS
+        async function loadProducts() {
+            const tbody = document.getElementById('productRows');
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center" style="padding:30px">Cargando productos...</td></tr>';
+            try {
+                allProducts = await json('/api/productos');
+                renderProducts(allProducts);
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center alert error">${esc(e.message)}</td></tr>`;
+            }
+        }
+
+        function renderProducts(list) {
+            const tbody = document.getElementById('productRows');
+            if (!list.length) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center muted" style="padding:30px">No hay productos en el catálogo.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = list.map(p => {
+                const margen = Number(p.precio || 0) - Number(p.costoUnitario || 0);
+                return `
+                    <tr>
+                        <td class="col-id">${p.id}</td>
+                        <td class="text-left">
+                            <b>${esc(p.nombre)}</b>
+                            <br><small class="muted">${esc(p.descripcion ? p.descripcion.substring(0, 60) + '...' : '')}</small>
+                        </td>
+                        <td class="text-left"><span class="badge">${esc(p.categoriaNombre || 'Sin categoría')}</span></td>
+                        <td class="col-money">${money(p.precio)}</td>
+                        <td class="col-money" style="color:#f87171">${money(p.costoUnitario)}</td>
+                        <td class="col-money col-profit">${money(margen)}</td>
+                        <td class="col-num" style="color:${p.stock > 0 ? '#4eedc2' : '#ff5d73'}"><b>${p.stock}</b></td>
+                        <td class="col-actions">
+                            <div class="actions">
+                                <button class="btn btn-outline btn-sm" onclick="editProduct(${p.id})">✏️ Editar</button>
+                                <button class="btn btn-danger btn-sm" onclick="delProduct(${p.id})">🗑️ Eliminar</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function loadCategoriesIntoSelect(selectedId = null) {
+            const select = document.getElementById('prodCategoria');
+            try {
+                const cats = await json('/api/productos/categorias');
+                select.innerHTML = '<option value="">Seleccione categoría</option>' +
+                    cats.map(c => `<option value="${c.id}" ${selectedId == c.id ? 'selected' : ''}>${esc(c.nombre)}</option>`).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        function openProductModal(p = null) {
+            const modal = document.getElementById('productModal');
+            const form = document.getElementById('productForm');
+            form.reset();
+            document.getElementById('prodId').value = p ? p.id : '';
+            document.getElementById('modalTitle').textContent = p ? 'Editar Producto' : 'Nuevo Producto';
+
+            loadCategoriesIntoSelect(p ? p.categoriaId : null);
+
+            if (p) {
+                document.getElementById('prodNombre').value = p.nombre || '';
+                document.getElementById('prodDescripcion').value = p.descripcion || '';
+                document.getElementById('prodPrecio').value = p.precio || '';
+                document.getElementById('prodCosto').value = p.costoUnitario || 0;
+                document.getElementById('prodStock').value = p.stock || 0;
+                document.getElementById('prodImagen').value = p.imagenUrl || '';
+            }
+            modal.classList.add('show');
+        }
+
+        function closeProductModal() {
+            document.getElementById('productModal').classList.remove('show');
+        }
+
+        async function editProduct(id) {
+            try {
+                const p = await json('/api/productos/' + id);
+                openProductModal(p);
+            } catch (e) { alertBox(e.message, 'error'); }
+        }
+
+        document.getElementById('productForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('prodId').value;
+            const body = {
+                nombre: document.getElementById('prodNombre').value.trim(),
+                categoriaId: Number(document.getElementById('prodCategoria').value) || null,
+                descripcion: document.getElementById('prodDescripcion').value.trim(),
+                precio: Number(document.getElementById('prodPrecio').value),
+                costoUnitario: Number(document.getElementById('prodCosto').value),
+                stock: Number(document.getElementById('prodStock').value),
+                imagenUrl: document.getElementById('prodImagen').value.trim()
+            };
+
+            try {
+                await json(id ? `/api/productos/${id}` : '/api/productos', {
+                    method: id ? 'PUT' : 'POST',
+                    body
+                });
+                closeProductModal();
+                loadProducts();
+                loadQuickStats();
+                alertBox(id ? 'Producto actualizado correctamente' : 'Producto creado exitosamente', 'ok');
+            } catch (err) {
+                alertBox(err.message, 'error');
+            }
+        };
+
+        async function delProduct(id) {
+            if (!confirm(`¿Está seguro de eliminar el producto #${id}? Esta acción no se puede deshacer.`)) return;
+            try {
+                await json('/api/productos/' + id, { method: 'DELETE' });
+                alertBox('Producto eliminado correctamente', 'ok');
+                loadProducts();
+            } catch (e) {
+                alertBox(e.message, 'error');
+            }
+        }
+
+        // 5. MÓDULO DE USUARIOS REGISTRADOS
+        async function loadUsers() {
+            const tbody = document.getElementById('userRows');
+            const statsDiv = document.getElementById('userStats');
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding:30px">Cargando usuarios...</td></tr>';
+            try {
+                allUsers = await json('/api/admin/usuarios');
+                
+                const total = allUsers.length;
+                const clientes = allUsers.filter(u => u.rol === 'CLIENTE').length;
+                const admins = allUsers.filter(u => u.rol === 'ADMIN').length;
+
+                statsDiv.innerHTML = `
+                    <div class="stat"><small>Total Registrados</small><strong>${total}</strong></div>
+                    <div class="stat highlight"><small>Clientes</small><strong>${clientes}</strong></div>
+                    <div class="stat"><small>Administradores</small><strong>${admins}</strong></div>
+                `;
+
+                renderUsers(allUsers);
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center alert error">${esc(e.message)}</td></tr>`;
+            }
+        }
+
+        function renderUsers(list) {
+            const tbody = document.getElementById('userRows');
+            if (!list.length) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center muted" style="padding:30px">No hay usuarios registrados.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = list.map(u => `
+                <tr>
+                    <td class="col-id">${u.id}</td>
+                    <td class="text-left"><b>${esc(u.nombre)}</b></td>
+                    <td class="text-left">${esc(u.email)}</td>
+                    <td class="text-center">
+                        <span class="badge" style="background:${u.rol === 'ADMIN' ? 'rgba(109,93,252,0.2)' : 'rgba(32,201,151,0.2)'}; color:${u.rol === 'ADMIN' ? '#b4a7ff' : '#4eedc2'}">
+                            ${u.rol}
+                        </span>
+                    </td>
+                    <td class="text-left">${esc(u.telefono || '-')}</td>
+                    <td class="text-left" style="max-width:260px">${esc(u.direccion || '-')}</td>
+                    <td class="col-date">${u.fechaRegistro ? new Date(u.fechaRegistro).toLocaleDateString('es-PE') : '-'}</td>
+                </tr>
+            `).join('');
+        }
+
+        function filterUsers() {
+            const q = (document.getElementById('userSearch').value || '').trim().toLowerCase();
+            const rol = document.getElementById('userRoleFilter').value;
+
+            const filtered = allUsers.filter(u => {
+                const matchQ = !q ||
+                    String(u.id).includes(q) ||
+                    (u.nombre && u.nombre.toLowerCase().includes(q)) ||
+                    (u.email && u.email.toLowerCase().includes(q)) ||
+                    (u.telefono && u.telefono.toLowerCase().includes(q)) ||
+                    (u.direccion && u.direccion.toLowerCase().includes(q));
+                const matchRole = !rol || u.rol === rol;
+                return matchQ && matchRole;
+            });
+            renderUsers(filtered);
+        }
+
+        // Inicialización
+        loadQuickStats();
+        loadOrders();
     </script>
 </body>
 </html>
